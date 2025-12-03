@@ -64,7 +64,7 @@ class _SupportPageState extends ConsumerState<SupportPage> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -230,7 +230,7 @@ class _MessageBubble extends StatelessWidget {
           if (!isMe) ...[
             CircleAvatar(
               radius: 16,
-              backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
               child: Icon(
                 Icons.support_agent,
                 size: 20,
@@ -276,7 +276,7 @@ class _MessageBubble extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10,
                       color: isMe
-                          ? Colors.white.withOpacity(0.7)
+                          ? Colors.white.withValues(alpha: 0.7)
                           : Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),

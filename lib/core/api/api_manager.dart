@@ -1,12 +1,11 @@
 import 'package:dio/dio.dart';
 import '../utils/logger.dart';
+import '../config/build_config.dart';
 import '../../shared/constants/app_constants.dart';
 
 /// API endpoint configuration
 class ApiEndpoint {
   final String url;
-  final String panelType; // 'sspanel' or 'v2board'
-  final String? subscriptionType; // 'clashmeta', 'meta', '1', '2', '3', '4'
   final bool isActive;
   final int priority;
   final DateTime? lastChecked;
@@ -14,8 +13,6 @@ class ApiEndpoint {
 
   const ApiEndpoint({
     required this.url,
-    required this.panelType,
-    this.subscriptionType,
     this.isActive = false,
     this.priority = 0,
     this.lastChecked,
@@ -24,8 +21,6 @@ class ApiEndpoint {
 
   ApiEndpoint copyWith({
     String? url,
-    String? panelType,
-    String? subscriptionType,
     bool? isActive,
     int? priority,
     DateTime? lastChecked,
@@ -33,8 +28,6 @@ class ApiEndpoint {
   }) {
     return ApiEndpoint(
       url: url ?? this.url,
-      panelType: panelType ?? this.panelType,
-      subscriptionType: subscriptionType ?? this.subscriptionType,
       isActive: isActive ?? this.isActive,
       priority: priority ?? this.priority,
       lastChecked: lastChecked ?? this.lastChecked,
@@ -44,8 +37,6 @@ class ApiEndpoint {
 
   Map<String, dynamic> toJson() => {
     'url': url,
-    'panelType': panelType,
-    'subscriptionType': subscriptionType,
     'isActive': isActive,
     'priority': priority,
     'lastChecked': lastChecked?.toIso8601String(),
@@ -54,8 +45,6 @@ class ApiEndpoint {
 
   factory ApiEndpoint.fromJson(Map<String, dynamic> json) => ApiEndpoint(
     url: json['url'] as String,
-    panelType: json['panelType'] as String,
-    subscriptionType: json['subscriptionType'] as String?,
     isActive: json['isActive'] as bool? ?? false,
     priority: json['priority'] as int? ?? 0,
     lastChecked: json['lastChecked'] != null
@@ -66,6 +55,7 @@ class ApiEndpoint {
 }
 
 /// API Manager for handling multiple OSS/API endpoints with auto-polling
+/// Uses BuildConfig for panel type and subscription type
 class ApiManager {
   static final ApiManager _instance = ApiManager._internal();
   static ApiManager get instance => _instance;
@@ -75,13 +65,32 @@ class ApiManager {
   late Dio _dio;
   final List<ApiEndpoint> _endpoints = [];
   ApiEndpoint? _activeEndpoint;
+  bool _initialized = false;
 
+  /// Get panel type from BuildConfig
+  String get panelType => BuildConfig.instance.isV2board
+      ? AppConstants.panelV2Board
+      : AppConstants.panelSSPanel;
+
+  /// Get subscription type from BuildConfig
+  String get subscriptionType => BuildConfig.instance.subscriptionType;
+
+  /// Get subscription suffix from BuildConfig
+  String get subscriptionSuffix => BuildConfig.instance.subscriptionSuffix;
+
+  /// Get guest config endpoint based on panel type
+  String get guestConfigEndpoint => BuildConfig.instance.guestConfigEndpoint;
+
+  /// Initialize ApiManager
   void init() {
+    if (_initialized) return;
+
     _dio = Dio(
       BaseOptions(
         connectTimeout: AppConstants.connectTimeout,
         receiveTimeout: AppConstants.apiTimeout,
         sendTimeout: AppConstants.apiTimeout,
+        headers: {'User-Agent': BuildConfig.instance.effectiveUserAgent},
       ),
     );
 
@@ -108,10 +117,42 @@ class ApiManager {
         },
       ),
     );
+
+    // Load endpoints from BuildConfig
+    _loadEndpointsFromConfig();
+
+    _initialized = true;
+    VortexLogger.i(
+      'ApiManager initialized with ${_endpoints.length} endpoints',
+    );
+  }
+
+  /// Load API endpoints from BuildConfig
+  void _loadEndpointsFromConfig() {
+    final config = BuildConfig.instance;
+
+    // Add API endpoints from config
+    for (var i = 0; i < config.apiEndpoints.length; i++) {
+      final url = config.apiEndpoints[i];
+      if (url.isNotEmpty) {
+        addEndpoint(ApiEndpoint(url: _normalizeUrl(url), priority: i));
+      }
+    }
+
+    VortexLogger.i('Loaded ${_endpoints.length} API endpoints from config');
+  }
+
+  /// Normalize URL (remove trailing slash)
+  String _normalizeUrl(String url) {
+    return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }
 
   /// Add API endpoint
   void addEndpoint(ApiEndpoint endpoint) {
+    // Check for duplicates
+    if (_endpoints.any((e) => e.url == endpoint.url)) {
+      return;
+    }
     _endpoints.add(endpoint);
     _endpoints.sort((a, b) => a.priority.compareTo(b.priority));
   }
@@ -136,9 +177,7 @@ class ApiManager {
   /// Test API endpoint availability
   Future<bool> testEndpoint(ApiEndpoint endpoint) async {
     try {
-      final testUrl = endpoint.panelType == AppConstants.panelV2Board
-          ? '${endpoint.url}${AppConstants.v2boardGuestConfig}'
-          : '${endpoint.url}${AppConstants.sspanelGuestConfig}';
+      final testUrl = '${endpoint.url}$guestConfigEndpoint';
 
       final response = await _dio.get(
         testUrl,
@@ -146,9 +185,12 @@ class ApiManager {
       );
 
       if (response.statusCode == 200) {
-        if (endpoint.panelType == AppConstants.panelV2Board) {
-          return response.data != null;
+        if (BuildConfig.instance.isV2board) {
+          // V2board returns JSON with data field
+          final data = response.data;
+          return data != null && data['data'] != null;
         } else {
+          // SSPanel returns JSON with config fields
           final data = response.data;
           return data != null &&
               (data['is_email_verify'] != null ||
@@ -165,6 +207,11 @@ class ApiManager {
   /// Poll all endpoints and find the first available one
   Future<ApiEndpoint?> pollEndpoints() async {
     VortexLogger.i('Starting API endpoint polling...');
+
+    if (_endpoints.isEmpty) {
+      VortexLogger.w('No endpoints configured');
+      return null;
+    }
 
     for (var i = 0; i < _endpoints.length; i++) {
       final endpoint = _endpoints[i];
@@ -185,6 +232,16 @@ class ApiManager {
 
     VortexLogger.w('No active endpoints found');
     return null;
+  }
+
+  /// Get the first active endpoint URL or poll if none active
+  Future<String?> getActiveEndpointUrl() async {
+    if (_activeEndpoint != null) {
+      return _activeEndpoint!.url;
+    }
+
+    final endpoint = await pollEndpoints();
+    return endpoint?.url;
   }
 
   /// Make authenticated request
@@ -217,18 +274,31 @@ class ApiManager {
 
   /// Get guest config
   Future<Map<String, dynamic>?> getGuestConfig() async {
+    if (_activeEndpoint == null) {
+      await pollEndpoints();
+    }
     if (_activeEndpoint == null) return null;
 
     try {
-      final configUrl = _activeEndpoint!.panelType == AppConstants.panelV2Board
-          ? AppConstants.v2boardGuestConfig
-          : AppConstants.sspanelGuestConfig;
+      final response = await _dio.get(
+        '${_activeEndpoint!.url}$guestConfigEndpoint',
+      );
 
-      final response = await _dio.get('${_activeEndpoint!.url}$configUrl');
+      if (BuildConfig.instance.isV2board) {
+        // V2board wraps response in data field
+        final responseData = response.data;
+        if (responseData is Map && responseData['data'] != null) {
+          return responseData['data'] as Map<String, dynamic>?;
+        }
+      }
+
       return response.data as Map<String, dynamic>?;
     } catch (e) {
       VortexLogger.e('Failed to get guest config', e);
       return null;
     }
   }
+
+  /// Get Dio instance for direct use
+  Dio get dio => _dio;
 }

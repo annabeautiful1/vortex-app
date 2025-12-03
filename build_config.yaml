@@ -1,0 +1,80 @@
+# Vortex 打包配置文件
+# 修改此文件来自定义打包后的应用配置
+
+# ==================== 基本配置 ====================
+
+# 应用名称 (安装后显示的名称)
+app_name: "bbxy"
+# 应用中文名称
+app_name_cn: "百变小樱"
+
+# ==================== 面板配置 ====================
+
+# 服务端类型: v2board 或 sspanel
+panel_type: "sspanel"
+
+# 订阅类型 (可选)
+# V2board:
+#   - 留空或 "clash": 默认 Clash 格式
+#   - "clashmeta": V2board 1.7.1 - 1.7.3 版本，支持 SS-2022、Hysteria 等新协议
+#   - "meta": V2board 1.7.4+ 版本，支持新协议
+# SSPanel:
+#   - "1", "2", "3", "4": 等同于 clash=1, clash=2, clash=3, clash=4
+#   - 注意：不要填写 "clash=1" 这种格式，只填数字
+subscription_type: "1"
+
+# ==================== API 配置 ====================
+
+# API 地址列表 (一行一个)
+# 支持多个地址，客户端会自动轮询可用的 API
+# V2board 示例: https://example.com
+# SSPanel 示例: https://example.com
+api_endpoints:
+  - "https://cn1.bbxy.fun"
+  # - "https://api-backup.example.com"
+
+# OSS 地址列表 (一行一个，可选)
+# 用于获取远程配置，支持自动轮询
+oss_endpoints: []
+  # - "https://oss.example.com/config.json"
+
+# 云端配置更新间隔 (小时，可选，0 表示禁用)
+cloud_update_interval: 1
+
+# DNS TXT 域名列表 (一行一个，可选)
+# 用于通过 DNS TXT 记录获取 API 地址，防止域名被墙
+dns_txt_domains: []
+  # - "_vortex.example.com"
+
+# ==================== 代理配置 ====================
+
+# 内建代理列表 (一行一个，可选)
+# 用于 API 通信，解决阻断、反诈、直连不畅等问题
+# 格式: 协议://地址:端口 或 完整的代理 URI
+builtin_proxies: []
+  # - "socks5://127.0.0.1:1080"
+  # - "http://127.0.0.1:8080"
+
+# 禁用直连 (true 或 false)
+# 设为 true 时，所有 API 请求必须通过代理
+disable_direct: false
+
+# ==================== 客户端配置 ====================
+
+# 客户端 User-Agent (可选)
+# 留空使用默认值
+user_agent: ""
+
+# ==================== 链接配置 ====================
+
+# 首页地址 (可选)
+# 用户点击可跳转到官网
+homepage_url: ""
+
+# 客服地址 (可选)
+# 在线客服系统地址
+support_url: ""
+
+# Telegram 链接 (可选)
+# Telegram 群组或频道链接
+telegram_url: ""

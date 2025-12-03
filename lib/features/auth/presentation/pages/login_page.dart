@@ -120,7 +120,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       width: 120,
                       height: 120,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(30),
                       ),
                       child: const Icon(
@@ -141,7 +141,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     Text(
                       AppConstants.appNameCn,
                       style: theme.textTheme.headlineSmall?.copyWith(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -151,7 +151,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         child: Text(
                           _guestConfig!['app_description'],
                           style: theme.textTheme.bodyLarge?.copyWith(
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -302,7 +302,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppTheme.errorColor.withOpacity(0.1),
+                              color: AppTheme.errorColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(

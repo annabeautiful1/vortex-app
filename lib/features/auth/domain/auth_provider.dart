@@ -4,6 +4,7 @@ import '../../../shared/models/user.dart';
 import '../../../core/api/api_manager.dart';
 import '../../../core/api/v2board_api.dart';
 import '../../../core/api/sspanel_api.dart';
+import '../../../core/config/build_config.dart';
 import '../../../shared/services/storage_service.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../core/utils/logger.dart';
@@ -98,9 +99,10 @@ class AuthState {
 }
 
 /// Auth notifier - supports both V2board and SSPanel
+/// Uses BuildConfig for panel type and API endpoints
 class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier() : super(const AuthState()) {
-    _checkStoredSession();
+    _initFromBuildConfig();
   }
 
   V2boardApi? _v2boardApi;
@@ -118,6 +120,41 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Get subscribe URL
   String? get subscribeUrl => state.user?.subscription.subscriptionUrl;
+
+  /// Initialize from BuildConfig
+  Future<void> _initFromBuildConfig() async {
+    final config = BuildConfig.instance;
+
+    // Set panel type from build config
+    final buildPanelType = config.isV2board
+        ? PanelType.v2board
+        : PanelType.sspanel;
+    state = state.copyWith(panelType: buildPanelType);
+
+    // If we have API endpoints in config, use the first available one
+    if (config.hasApiEndpoints) {
+      final baseUrl = await ApiManager.instance.getActiveEndpointUrl();
+      if (baseUrl != null) {
+        state = state.copyWith(baseUrl: baseUrl);
+        await _initApiClient(baseUrl, buildPanelType);
+      }
+    }
+
+    // Then check for stored session
+    await _checkStoredSession();
+  }
+
+  /// Initialize API client based on panel type
+  Future<void> _initApiClient(String baseUrl, PanelType panelType) async {
+    if (panelType == PanelType.v2board) {
+      _v2boardApi = V2boardApi(baseUrl: baseUrl);
+      _sspanelApi = null;
+    } else {
+      _sspanelApi = SSPanelApi(baseUrl: baseUrl);
+      _v2boardApi = null;
+    }
+    VortexLogger.i('API client initialized for ${panelType.name}: $baseUrl');
+  }
 
   Future<void> _checkStoredSession() async {
     final authData = await StorageService.instance.getSecure(

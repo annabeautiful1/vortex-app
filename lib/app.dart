@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'shared/themes/app_theme.dart';
-import 'shared/constants/app_constants.dart';
+import 'core/config/build_config.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/dashboard/presentation/pages/dashboard_page.dart';
 import 'features/nodes/presentation/pages/nodes_page.dart';
@@ -41,9 +41,10 @@ class VortexApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    final config = BuildConfig.instance;
 
     return MaterialApp.router(
-      title: AppConstants.appName,
+      title: config.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

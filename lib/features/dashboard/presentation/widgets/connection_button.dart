@@ -37,12 +37,12 @@ class ConnectionButton extends ConsumerWidget {
                     colors: isConnected
                         ? [
                             AppTheme.connectedColor,
-                            AppTheme.connectedColor.withOpacity(0.7),
+                            AppTheme.connectedColor.withValues(alpha: 0.7),
                           ]
                         : isConnecting
                         ? [
                             AppTheme.connectingColor,
-                            AppTheme.connectingColor.withOpacity(0.7),
+                            AppTheme.connectingColor.withValues(alpha: 0.7),
                           ]
                         : [Colors.grey.shade400, Colors.grey.shade600],
                   ),
@@ -54,7 +54,7 @@ class ConnectionButton extends ConsumerWidget {
                                   : isConnecting
                                   ? AppTheme.connectingColor
                                   : Colors.grey)
-                              .withOpacity(0.4),
+                              .withValues(alpha: 0.4),
                       blurRadius: 30,
                       spreadRadius: 5,
                     ),
@@ -98,7 +98,7 @@ class ConnectionButton extends ConsumerWidget {
                       Text(
                         connectionState.connectedNode!.name,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                           fontSize: 12,
                         ),
                         maxLines: 1,
@@ -116,7 +116,7 @@ class ConnectionButton extends ConsumerWidget {
                 duration: isConnecting
                     ? const Duration(seconds: 2)
                     : Duration.zero,
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withValues(alpha: 0.3),
               ),
     );
   }

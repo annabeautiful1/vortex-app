@@ -23,7 +23,7 @@ class TrafficCard extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.accentColor.withOpacity(0.1),
+                    color: AppTheme.accentColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(Icons.data_usage, color: AppTheme.accentColor),
@@ -61,7 +61,7 @@ class TrafficCard extends ConsumerWidget {
                     value: subscription.trafficTotal > 0
                         ? subscription.trafficUsed / subscription.trafficTotal
                         : 0,
-                    backgroundColor: Colors.grey.withOpacity(0.2),
+                    backgroundColor: Colors.grey.withValues(alpha: 0.2),
                     valueColor: AlwaysStoppedAnimation<Color>(
                       _getTrafficColor(
                         subscription.trafficUsed,

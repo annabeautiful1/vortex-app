@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../utils/logger.dart';
+import '../config/build_config.dart';
 import '../../shared/models/proxy_node.dart';
 
 /// 订阅解析服务
@@ -17,15 +18,26 @@ class SubscriptionParser {
       );
 
   /// 从URL获取并解析订阅
+  /// subType 参数可选，如果不传则使用 BuildConfig 中配置的订阅类型
   Future<List<ProxyNode>> parseFromUrl(String url, {String? subType}) async {
     try {
+      // 使用传入的 subType 或 BuildConfig 中的配置
+      final effectiveSubType = subType ?? BuildConfig.instance.subscriptionType;
+
       // 添加订阅类型参数
       String requestUrl = url;
-      if (subType != null &&
+      if (effectiveSubType.isNotEmpty &&
           !url.contains('flag=') &&
           !url.contains('clash=')) {
         final separator = url.contains('?') ? '&' : '?';
-        requestUrl = '$url${separator}flag=$subType';
+
+        if (BuildConfig.instance.isV2board) {
+          // V2board: 使用 flag 参数
+          requestUrl = '$url${separator}flag=$effectiveSubType';
+        } else {
+          // SSPanel: 使用 clash 参数
+          requestUrl = '$url${separator}clash=$effectiveSubType';
+        }
       }
 
       VortexLogger.subscription('fetch', requestUrl);
@@ -34,7 +46,7 @@ class SubscriptionParser {
         requestUrl,
         options: Options(
           responseType: ResponseType.plain,
-          headers: {'User-Agent': 'ClashMeta/1.0'},
+          headers: {'User-Agent': BuildConfig.instance.effectiveUserAgent},
         ),
       );
 

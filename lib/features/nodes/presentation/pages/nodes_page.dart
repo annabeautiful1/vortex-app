@@ -194,7 +194,7 @@ class _NodeTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      color: isConnected ? AppTheme.primaryColor.withOpacity(0.1) : null,
+      color: isConnected ? AppTheme.primaryColor.withValues(alpha: 0.1) : null,
       child: ListTile(
         onTap: onTap,
         leading: Container(
@@ -202,8 +202,8 @@ class _NodeTile extends StatelessWidget {
           height: 40,
           decoration: BoxDecoration(
             color: isConnected
-                ? AppTheme.connectedColor.withOpacity(0.1)
-                : Colors.grey.withOpacity(0.1),
+                ? AppTheme.connectedColor.withValues(alpha: 0.1)
+                : Colors.grey.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -305,7 +305,7 @@ class _Tag extends StatelessWidget {
       margin: const EdgeInsets.only(left: 4),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
