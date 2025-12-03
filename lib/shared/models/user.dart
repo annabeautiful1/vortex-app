@@ -7,6 +7,9 @@ class User {
   final UserSubscription subscription;
   final DateTime? createdAt;
   final DateTime? lastLoginAt;
+  final int balance; // cents
+  final int commissionBalance; // cents
+  final bool banned;
 
   const User({
     required this.id,
@@ -16,6 +19,9 @@ class User {
     required this.subscription,
     this.createdAt,
     this.lastLoginAt,
+    this.balance = 0,
+    this.commissionBalance = 0,
+    this.banned = false,
   });
 
   User copyWith({
@@ -26,6 +32,9 @@ class User {
     UserSubscription? subscription,
     DateTime? createdAt,
     DateTime? lastLoginAt,
+    int? balance,
+    int? commissionBalance,
+    bool? banned,
   }) {
     return User(
       id: id ?? this.id,
@@ -35,6 +44,9 @@ class User {
       subscription: subscription ?? this.subscription,
       createdAt: createdAt ?? this.createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+      balance: balance ?? this.balance,
+      commissionBalance: commissionBalance ?? this.commissionBalance,
+      banned: banned ?? this.banned,
     );
   }
 
@@ -46,6 +58,9 @@ class User {
     'subscription': subscription.toJson(),
     'createdAt': createdAt?.toIso8601String(),
     'lastLoginAt': lastLoginAt?.toIso8601String(),
+    'balance': balance,
+    'commissionBalance': commissionBalance,
+    'banned': banned,
   };
 
   factory User.fromJson(Map<String, dynamic> json) => User(
@@ -62,7 +77,17 @@ class User {
     lastLoginAt: json['lastLoginAt'] != null
         ? DateTime.parse(json['lastLoginAt'] as String)
         : null,
+    balance: json['balance'] as int? ?? 0,
+    commissionBalance: json['commissionBalance'] as int? ?? 0,
+    banned: json['banned'] as bool? ?? false,
   );
+
+  /// 格式化余额 (元)
+  String get formattedBalance => (balance / 100).toStringAsFixed(2);
+
+  /// 格式化佣金余额 (元)
+  String get formattedCommissionBalance =>
+      (commissionBalance / 100).toStringAsFixed(2);
 }
 
 /// User subscription info

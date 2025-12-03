@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/user.dart';
 import '../../../core/api/api_manager.dart';
+import '../../../core/api/v2board_api.dart';
 import '../../../shared/services/storage_service.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../core/utils/logger.dart';
@@ -12,12 +13,14 @@ class AuthState {
   final bool isLoading;
   final User? user;
   final String? error;
+  final V2boardGuestConfig? guestConfig;
 
   const AuthState({
     this.isAuthenticated = false,
     this.isLoading = false,
     this.user,
     this.error,
+    this.guestConfig,
   });
 
   AuthState copyWith({
@@ -25,12 +28,14 @@ class AuthState {
     bool? isLoading,
     User? user,
     String? error,
+    V2boardGuestConfig? guestConfig,
   }) {
     return AuthState(
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
       isLoading: isLoading ?? this.isLoading,
       user: user ?? this.user,
       error: error,
+      guestConfig: guestConfig ?? this.guestConfig,
     );
   }
 }
@@ -41,14 +46,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _checkStoredSession();
   }
 
+  V2boardApi? _v2boardApi;
+
+  /// 获取V2board API实例
+  V2boardApi? get v2boardApi => _v2boardApi;
+
   Future<void> _checkStoredSession() async {
-    final token = await StorageService.instance.getSecure(
+    final authData = await StorageService.instance.getSecure(
       AppConstants.tokenKey,
     );
-    if (token != null) {
+    final baseUrl = await StorageService.instance.getSecure(
+      AppConstants.apiEndpointsKey,
+    );
+
+    if (authData != null && baseUrl != null) {
       state = state.copyWith(isLoading: true);
       try {
-        await _fetchUserInfo(token);
+        _v2boardApi = V2boardApi(baseUrl: baseUrl);
+        _v2boardApi!.setAuthData(authData);
+        await _fetchUserInfo();
       } catch (e) {
         VortexLogger.e('Failed to restore session', e);
         await logout();
@@ -56,38 +72,57 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// 初始化API连接并获取访客配置
+  Future<V2boardGuestConfig?> initializeApi(String baseUrl) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      _v2boardApi = V2boardApi(baseUrl: baseUrl);
+      final config = await _v2boardApi!.getGuestConfig();
+
+      // 保存base URL
+      await StorageService.instance.setSecure(
+        AppConstants.apiEndpointsKey,
+        baseUrl,
+      );
+
+      state = state.copyWith(isLoading: false, guestConfig: config);
+      VortexLogger.i('API initialized: $baseUrl');
+      return config;
+    } catch (e) {
+      VortexLogger.e('Failed to initialize API', e);
+      state = state.copyWith(isLoading: false, error: e.toString());
+      return null;
+    }
+  }
+
+  /// 获取访客配置 (使用ApiManager兼容模式)
   Future<Map<String, dynamic>?> getGuestConfig() async {
     return await ApiManager.instance.getGuestConfig();
   }
 
+  /// 登录
   Future<void> login({required String email, required String password}) async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final endpoint = ApiManager.instance.activeEndpoint;
-      if (endpoint == null) {
-        throw Exception(ErrorMessages.noValidApi);
+      if (_v2boardApi == null) {
+        throw Exception('请先选择服务器');
       }
 
-      final response = await ApiManager.instance.request(
-        endpoint.panelType == AppConstants.panelV2Board
-            ? '/api/v1/passport/auth/login'
-            : '/api/v1/user/login',
-        method: 'POST',
-        data: {'email': email, 'password': password},
+      final authResponse = await _v2boardApi!.login(
+        email: email,
+        password: password,
       );
 
-      final data = response.data;
-      String token;
+      // 保存认证数据
+      await StorageService.instance.setSecure(
+        AppConstants.tokenKey,
+        authResponse.authData,
+      );
 
-      if (endpoint.panelType == AppConstants.panelV2Board) {
-        token = data['data']['auth_data'];
-      } else {
-        token = data['data']['token'];
-      }
-
-      await StorageService.instance.setSecure(AppConstants.tokenKey, token);
-      await _fetchUserInfo(token);
+      // 获取用户信息
+      await _fetchUserInfo();
 
       VortexLogger.i('User logged in: $email');
     } catch (e) {
@@ -97,34 +132,35 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// 注册
   Future<void> register({
     required String email,
     required String password,
     String? inviteCode,
+    String? emailCode,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final endpoint = ApiManager.instance.activeEndpoint;
-      if (endpoint == null) {
-        throw Exception(ErrorMessages.noValidApi);
+      if (_v2boardApi == null) {
+        throw Exception('请先选择服务器');
       }
 
-      final requestData = {'email': email, 'password': password};
-
-      if (inviteCode != null && inviteCode.isNotEmpty) {
-        requestData['invite_code'] = inviteCode;
-      }
-
-      await ApiManager.instance.request(
-        endpoint.panelType == AppConstants.panelV2Board
-            ? '/api/v1/passport/auth/register'
-            : '/api/v1/user/register',
-        method: 'POST',
-        data: requestData,
+      final authResponse = await _v2boardApi!.register(
+        email: email,
+        password: password,
+        inviteCode: inviteCode,
+        emailCode: emailCode,
       );
 
-      await login(email: email, password: password);
+      // 保存认证数据
+      await StorageService.instance.setSecure(
+        AppConstants.tokenKey,
+        authResponse.authData,
+      );
+
+      // 获取用户信息
+      await _fetchUserInfo();
 
       VortexLogger.i('User registered: $email');
     } catch (e) {
@@ -134,63 +170,129 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> _fetchUserInfo(String token) async {
+  /// 发送邮箱验证码
+  Future<bool> sendEmailVerifyCode(String email) async {
+    if (_v2boardApi == null) {
+      throw Exception('请先选择服务器');
+    }
+    return await _v2boardApi!.sendEmailVerifyCode(email);
+  }
+
+  /// 忘记密码
+  Future<bool> forgetPassword({
+    required String email,
+    required String emailCode,
+    required String newPassword,
+  }) async {
+    if (_v2boardApi == null) {
+      throw Exception('请先选择服务器');
+    }
+    return await _v2boardApi!.forgetPassword(
+      email: email,
+      emailCode: emailCode,
+      newPassword: newPassword,
+    );
+  }
+
+  /// 获取用户信息
+  Future<void> _fetchUserInfo() async {
     try {
-      final endpoint = ApiManager.instance.activeEndpoint;
-      if (endpoint == null) {
-        throw Exception(ErrorMessages.noValidApi);
+      if (_v2boardApi == null) {
+        throw Exception('API未初始化');
       }
 
-      final response = await ApiManager.instance.request(
-        endpoint.panelType == AppConstants.panelV2Board
-            ? '/api/v1/user/info'
-            : '/api/v1/user/info',
-        token: token,
-      );
-
-      final data = response.data['data'];
+      final userInfo = await _v2boardApi!.getUserInfo();
+      final subscribeInfo = await _v2boardApi!.getSubscribe();
 
       final user = User(
-        id: data['id']?.toString() ?? '',
-        email: data['email'] ?? '',
-        username: data['name'] ?? data['username'],
-        avatarUrl: data['avatar_url'],
+        id: userInfo.uuid,
+        email: userInfo.email,
+        username: userInfo.email.split('@').first,
+        avatarUrl: userInfo.avatarUrl,
         subscription: UserSubscription(
-          planName: data['plan']?['name'] ?? '无套餐',
-          expireAt: data['expired_at'] != null
-              ? DateTime.fromMillisecondsSinceEpoch(data['expired_at'] * 1000)
-              : DateTime.now(),
-          trafficTotal: data['transfer_enable'] ?? 0,
-          trafficUsed: (data['u'] ?? 0) + (data['d'] ?? 0),
-          trafficRemaining:
-              (data['transfer_enable'] ?? 0) -
-              ((data['u'] ?? 0) + (data['d'] ?? 0)),
-          subscriptionUrl: data['subscribe_url'],
+          planName: subscribeInfo.plan?.name ?? '无套餐',
+          expireAt: userInfo.expireDate ?? DateTime.now(),
+          trafficTotal: subscribeInfo.transferEnable,
+          trafficUsed: subscribeInfo.usedTraffic,
+          trafficRemaining: subscribeInfo.remainingTraffic,
+          subscriptionUrl: subscribeInfo.subscribeUrl,
         ),
-        createdAt: data['created_at'] != null
-            ? DateTime.fromMillisecondsSinceEpoch(data['created_at'] * 1000)
-            : null,
+        balance: userInfo.balance,
+        createdAt: DateTime.fromMillisecondsSinceEpoch(
+          userInfo.createdAt * 1000,
+        ),
       );
 
-      state = AuthState(isAuthenticated: true, isLoading: false, user: user);
+      state = AuthState(
+        isAuthenticated: true,
+        isLoading: false,
+        user: user,
+        guestConfig: state.guestConfig,
+      );
     } catch (e) {
       VortexLogger.e('Failed to fetch user info', e);
       rethrow;
     }
   }
 
+  /// 登出
   Future<void> logout() async {
     await StorageService.instance.deleteSecure(AppConstants.tokenKey);
-    state = const AuthState();
+    _v2boardApi?.clearAuthData();
+    state = AuthState(guestConfig: state.guestConfig);
     VortexLogger.i('User logged out');
   }
 
+  /// 刷新用户信息
   Future<void> refreshUserInfo() async {
-    final token = await StorageService.instance.getSecure(
-      AppConstants.tokenKey,
-    );
-    if (token != null) {
-      await _fetchUserInfo(token);
+    if (_v2boardApi != null && state.isAuthenticated) {
+      await _fetchUserInfo();
+    }
+  }
+
+  /// 获取公告列表
+  Future<V2boardNoticeList?> getNotices({int page = 1}) async {
+    if (_v2boardApi == null) return null;
+    try {
+      return await _v2boardApi!.getNotices(page: page);
+    } catch (e) {
+      VortexLogger.e('Failed to get notices', e);
+      return null;
+    }
+  }
+
+  /// 获取套餐列表
+  Future<List<V2boardPlan>?> getPlans() async {
+    if (_v2boardApi == null) return null;
+    try {
+      return await _v2boardApi!.getPlans();
+    } catch (e) {
+      VortexLogger.e('Failed to get plans', e);
+      return null;
+    }
+  }
+
+  /// 获取订阅信息
+  Future<V2boardSubscribeInfo?> getSubscribeInfo() async {
+    if (_v2boardApi == null) return null;
+    try {
+      return await _v2boardApi!.getSubscribe();
+    } catch (e) {
+      VortexLogger.e('Failed to get subscribe info', e);
+      return null;
+    }
+  }
+
+  /// 重置订阅链接
+  Future<String?> resetSubscribeUrl() async {
+    if (_v2boardApi == null) return null;
+    try {
+      final newUrl = await _v2boardApi!.resetSecurity();
+      await refreshUserInfo();
+      return newUrl;
+    } catch (e) {
+      VortexLogger.e('Failed to reset subscribe url', e);
+      return null;
     }
   }
 }

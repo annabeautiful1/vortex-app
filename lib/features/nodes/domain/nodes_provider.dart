@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/proxy_node.dart';
 import '../../../core/proxy/proxy_core.dart';
-import '../../../core/api/api_manager.dart';
+import '../../../core/subscription/subscription_parser.dart';
 import '../../../shared/services/storage_service.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../core/utils/logger.dart';
@@ -12,12 +12,14 @@ class NodesState {
   final Map<String, int?> latencies;
   final bool isLoading;
   final String? error;
+  final String? subscribeUrl;
 
   const NodesState({
     this.nodes = const [],
     this.latencies = const {},
     this.isLoading = false,
     this.error,
+    this.subscribeUrl,
   });
 
   NodesState copyWith({
@@ -25,13 +27,34 @@ class NodesState {
     Map<String, int?>? latencies,
     bool? isLoading,
     String? error,
+    String? subscribeUrl,
   }) {
     return NodesState(
       nodes: nodes ?? this.nodes,
       latencies: latencies ?? this.latencies,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      subscribeUrl: subscribeUrl ?? this.subscribeUrl,
     );
+  }
+
+  /// 获取按分组的节点
+  Map<String, List<ProxyNode>> get nodesByGroup {
+    final grouped = <String, List<ProxyNode>>{};
+    for (final node in nodes) {
+      final group = node.group ?? '默认';
+      grouped.putIfAbsent(group, () => []).add(node);
+    }
+    return grouped;
+  }
+
+  /// 获取按协议的节点
+  Map<ProtocolType, List<ProxyNode>> get nodesByProtocol {
+    final grouped = <ProtocolType, List<ProxyNode>>{};
+    for (final node in nodes) {
+      grouped.putIfAbsent(node.protocol, () => []).add(node);
+    }
+    return grouped;
   }
 }
 
@@ -39,6 +62,8 @@ class NodesNotifier extends StateNotifier<NodesState> {
   NodesNotifier() : super(const NodesState()) {
     _loadCachedNodes();
   }
+
+  final SubscriptionParser _parser = SubscriptionParser();
 
   Future<void> _loadCachedNodes() async {
     final cached = StorageService.instance.getObject(
@@ -52,49 +77,52 @@ class NodesNotifier extends StateNotifier<NodesState> {
     }
   }
 
-  Future<void> refreshNodes() async {
+  /// 从URL刷新节点列表
+  Future<void> refreshNodesFromUrl(
+    String subscribeUrl, {
+    String? subType,
+  }) async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final endpoint = ApiManager.instance.activeEndpoint;
-      if (endpoint == null) {
-        throw Exception(ErrorMessages.noValidApi);
+      final nodes = await _parser.parseFromUrl(subscribeUrl, subType: subType);
+
+      if (nodes.isEmpty) {
+        throw Exception(ErrorMessages.noNodes);
       }
 
-      final token = await StorageService.instance.getSecure(
-        AppConstants.tokenKey,
+      // 保存到缓存
+      await StorageService.instance.putObject(
+        AppConstants.serverListKey,
+        nodes.map((e) => e.toJson()).toList(),
       );
-      if (token == null) {
-        throw Exception('未登录');
+
+      state = state.copyWith(
+        nodes: nodes,
+        isLoading: false,
+        subscribeUrl: subscribeUrl,
+      );
+
+      VortexLogger.i('Loaded ${nodes.length} nodes from subscription');
+    } catch (e) {
+      VortexLogger.e('Failed to refresh nodes', e);
+      state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
+    }
+  }
+
+  /// 从本地内容解析节点
+  Future<void> parseNodesFromContent(String content) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final nodes = _parser.parse(content);
+
+      if (nodes.isEmpty) {
+        throw Exception(ErrorMessages.noNodes);
       }
 
-      final userResponse = await ApiManager.instance.request(
-        endpoint.panelType == AppConstants.panelV2Board
-            ? '/api/v1/user/getSubscribe'
-            : '/api/v1/user/subscription',
-        token: token,
-      );
-
-      String subscribeUrl;
-      if (endpoint.panelType == AppConstants.panelV2Board) {
-        subscribeUrl = userResponse.data['data']['subscribe_url'];
-        final subType = endpoint.subscriptionType ?? 'clashmeta';
-        subscribeUrl = '$subscribeUrl&flag=$subType';
-      } else {
-        subscribeUrl = userResponse.data['data']['url'];
-        final subType = endpoint.subscriptionType ?? '1';
-        subscribeUrl = '$subscribeUrl?clash=$subType';
-      }
-
-      VortexLogger.subscription('fetch', subscribeUrl);
-
-      final subResponse = await ApiManager.instance.request(
-        subscribeUrl,
-        method: 'GET',
-      );
-
-      final nodes = _parseSubscription(subResponse.data, endpoint.panelType);
-
+      // 保存到缓存
       await StorageService.instance.putObject(
         AppConstants.serverListKey,
         nodes.map((e) => e.toJson()).toList(),
@@ -102,140 +130,15 @@ class NodesNotifier extends StateNotifier<NodesState> {
 
       state = state.copyWith(nodes: nodes, isLoading: false);
 
-      VortexLogger.i('Loaded ${nodes.length} nodes');
+      VortexLogger.i('Parsed ${nodes.length} nodes from content');
     } catch (e) {
-      VortexLogger.e('Failed to refresh nodes', e);
+      VortexLogger.e('Failed to parse nodes', e);
       state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
     }
   }
 
-  List<ProxyNode> _parseSubscription(dynamic data, String panelType) {
-    final nodes = <ProxyNode>[];
-
-    if (data is Map<String, dynamic>) {
-      final proxies = data['proxies'] as List?;
-      if (proxies != null) {
-        for (final proxy in proxies) {
-          final node = _parseProxy(proxy as Map<String, dynamic>);
-          if (node != null) {
-            nodes.add(node);
-          }
-        }
-      }
-    }
-
-    return nodes;
-  }
-
-  ProxyNode? _parseProxy(Map<String, dynamic> proxy) {
-    try {
-      final type = proxy['type'] as String?;
-      if (type == null) return null;
-
-      final protocol = _getProtocolType(type);
-      if (protocol == null) return null;
-
-      final name = proxy['name'] as String? ?? '';
-      final tags = _extractTags(name);
-      final multiplier = _extractMultiplier(name);
-
-      return ProxyNode(
-        id: '${proxy['server']}_${proxy['port']}',
-        name: name,
-        server: proxy['server'] as String? ?? '',
-        port: proxy['port'] as int? ?? 0,
-        protocol: protocol,
-        settings: _extractSettings(proxy, protocol),
-        group: proxy['group'] as String?,
-        tags: tags,
-        multiplier: multiplier,
-      );
-    } catch (e) {
-      VortexLogger.w('Failed to parse proxy: $e');
-      return null;
-    }
-  }
-
-  ProtocolType? _getProtocolType(String type) {
-    switch (type.toLowerCase()) {
-      case 'ss':
-      case 'shadowsocks':
-        return ProtocolType.shadowsocks;
-      case 'ssr':
-      case 'shadowsocksr':
-        return ProtocolType.shadowsocksR;
-      case 'vmess':
-        return ProtocolType.vmess;
-      case 'vless':
-        return ProtocolType.vless;
-      case 'trojan':
-        return ProtocolType.trojan;
-      case 'hysteria':
-        return ProtocolType.hysteria;
-      case 'hysteria2':
-        return ProtocolType.hysteria2;
-      case 'tuic':
-        return ProtocolType.tuic;
-      case 'wireguard':
-      case 'wg':
-        return ProtocolType.wireguard;
-      case 'anytls':
-        return ProtocolType.anytls;
-      default:
-        return null;
-    }
-  }
-
-  Map<String, dynamic> _extractSettings(
-    Map<String, dynamic> proxy,
-    ProtocolType protocol,
-  ) {
-    final settings = Map<String, dynamic>.from(proxy);
-    settings.remove('name');
-    settings.remove('server');
-    settings.remove('port');
-    settings.remove('type');
-    settings.remove('group');
-    return settings;
-  }
-
-  List<NodeTag> _extractTags(String name) {
-    final tags = <NodeTag>[];
-    final lowerName = name.toLowerCase();
-
-    if (lowerName.contains('解锁') || lowerName.contains('unlock')) {
-      tags.add(NodeTag.unlock);
-    }
-    if (lowerName.contains('游戏') || lowerName.contains('game')) {
-      tags.add(NodeTag.gaming);
-    }
-    if (lowerName.contains('流媒体') || lowerName.contains('stream')) {
-      tags.add(NodeTag.streaming);
-    }
-    if (lowerName.contains('chatgpt') ||
-        lowerName.contains('gpt') ||
-        lowerName.contains('openai')) {
-      tags.add(NodeTag.chatgpt);
-    }
-    if (lowerName.contains('netflix') || lowerName.contains('nf')) {
-      tags.add(NodeTag.netflix);
-    }
-    if (lowerName.contains('disney') || lowerName.contains('d+')) {
-      tags.add(NodeTag.disney);
-    }
-
-    return tags;
-  }
-
-  double _extractMultiplier(String name) {
-    final regex = RegExp(r'(\d+\.?\d*)\s*[xX倍]');
-    final match = regex.firstMatch(name);
-    if (match != null) {
-      return double.tryParse(match.group(1)!) ?? 1.0;
-    }
-    return 1.0;
-  }
-
+  /// 测试所有节点延迟
   Future<void> testAllLatencies() async {
     state = state.copyWith(isLoading: true);
 
@@ -244,11 +147,67 @@ class NodesNotifier extends StateNotifier<NodesState> {
     state = state.copyWith(latencies: latencies, isLoading: false);
   }
 
+  /// 测试单个节点延迟
   Future<void> testLatency(ProxyNode node) async {
     final latency = await ProxyCore.instance.testLatency(node);
     final newLatencies = Map<String, int?>.from(state.latencies);
     newLatencies[node.id] = latency;
     state = state.copyWith(latencies: newLatencies);
+  }
+
+  /// 获取节点延迟
+  int? getLatency(String nodeId) => state.latencies[nodeId];
+
+  /// 按延迟排序节点
+  List<ProxyNode> get sortedByLatency {
+    final sorted = List<ProxyNode>.from(state.nodes);
+    sorted.sort((a, b) {
+      final latencyA = state.latencies[a.id];
+      final latencyB = state.latencies[b.id];
+      if (latencyA == null && latencyB == null) return 0;
+      if (latencyA == null) return 1;
+      if (latencyB == null) return -1;
+      return latencyA.compareTo(latencyB);
+    });
+    return sorted;
+  }
+
+  /// 筛选节点
+  List<ProxyNode> filterNodes({
+    String? keyword,
+    ProtocolType? protocol,
+    String? group,
+    List<NodeTag>? tags,
+  }) {
+    return state.nodes.where((node) {
+      if (keyword != null && keyword.isNotEmpty) {
+        final lowerKeyword = keyword.toLowerCase();
+        if (!node.name.toLowerCase().contains(lowerKeyword) &&
+            !node.server.toLowerCase().contains(lowerKeyword)) {
+          return false;
+        }
+      }
+      if (protocol != null && node.protocol != protocol) {
+        return false;
+      }
+      if (group != null && node.group != group) {
+        return false;
+      }
+      if (tags != null && tags.isNotEmpty) {
+        for (final tag in tags) {
+          if (!node.tags.contains(tag)) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }).toList();
+  }
+
+  /// 清除节点缓存
+  Future<void> clearCache() async {
+    await StorageService.instance.deleteObject(AppConstants.serverListKey);
+    state = const NodesState();
   }
 }
 

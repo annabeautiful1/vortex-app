@@ -50,8 +50,12 @@ class NodesPage extends ConsumerWidget {
                         tooltip: '测速全部',
                       ),
                       IconButton(
-                        onPressed: () =>
-                            ref.read(nodesProvider.notifier).refreshNodes(),
+                        onPressed: () async {
+                          // TODO: Get subscribe URL from auth provider
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('请先登录并获取订阅')),
+                          );
+                        },
                         icon: const Icon(Icons.refresh),
                         tooltip: '刷新订阅',
                       ),
