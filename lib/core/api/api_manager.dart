@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../utils/logger.dart';
+import '../utils/dev_mode.dart';
 import '../config/build_config.dart';
 import '../../shared/constants/app_constants.dart';
 
@@ -125,17 +126,33 @@ class ApiManager {
     VortexLogger.i(
       'ApiManager initialized with ${_endpoints.length} endpoints',
     );
+    DevMode.instance.log(
+      'ApiManager',
+      '初始化完成',
+      detail: '端点数量: ${_endpoints.length}',
+    );
   }
 
   /// Load API endpoints from BuildConfig
   void _loadEndpointsFromConfig() {
     final config = BuildConfig.instance;
 
+    DevMode.instance.log(
+      'ApiManager',
+      '从配置加载端点',
+      detail:
+          '''
+配置中的端点数量: ${config.apiEndpoints.length}
+端点列表: ${config.apiEndpoints}''',
+    );
+
     // Add API endpoints from config
     for (var i = 0; i < config.apiEndpoints.length; i++) {
       final url = config.apiEndpoints[i];
       if (url.isNotEmpty) {
-        addEndpoint(ApiEndpoint(url: _normalizeUrl(url), priority: i));
+        final normalizedUrl = _normalizeUrl(url);
+        addEndpoint(ApiEndpoint(url: normalizedUrl, priority: i));
+        DevMode.instance.log('ApiManager', '添加端点', detail: normalizedUrl);
       }
     }
 
@@ -176,30 +193,64 @@ class ApiManager {
 
   /// Test API endpoint availability
   Future<bool> testEndpoint(ApiEndpoint endpoint) async {
-    try {
-      final testUrl = '${endpoint.url}$guestConfigEndpoint';
+    final testUrl = '${endpoint.url}$guestConfigEndpoint';
+    DevMode.instance.log('ApiManager', '测试端点', detail: testUrl);
 
+    try {
       final response = await _dio.get(
         testUrl,
         options: Options(receiveTimeout: AppConstants.pingTimeout),
+      );
+
+      DevMode.instance.log(
+        'ApiManager',
+        '端点响应',
+        detail:
+            '''
+URL: $testUrl
+状态码: ${response.statusCode}
+响应类型: ${response.data.runtimeType}''',
       );
 
       if (response.statusCode == 200) {
         if (BuildConfig.instance.isV2board) {
           // V2board returns JSON with data field
           final data = response.data;
-          return data != null && data['data'] != null;
+          final success = data != null && data['data'] != null;
+          DevMode.instance.log(
+            'ApiManager',
+            'V2board 端点测试',
+            detail: '成功: $success',
+          );
+          return success;
         } else {
           // SSPanel returns JSON with config fields
           final data = response.data;
-          return data != null &&
+          final success =
+              data != null &&
               (data['is_email_verify'] != null ||
                   data['app_description'] != null);
+          DevMode.instance.log(
+            'ApiManager',
+            'SSPanel 端点测试',
+            detail:
+                '''
+成功: $success
+响应数据: $data''',
+          );
+          return success;
         }
       }
+      DevMode.instance.log(
+        'ApiManager',
+        '端点测试失败',
+        detail: '状态码: ${response.statusCode}',
+        isError: true,
+      );
       return false;
-    } catch (e) {
+    } catch (e, stack) {
       VortexLogger.e('Endpoint test failed: ${endpoint.url}', e);
+      DevMode.instance.error('ApiManager', '端点测试异常: ${endpoint.url}', e, stack);
       return false;
     }
   }
@@ -207,14 +258,26 @@ class ApiManager {
   /// Poll all endpoints and find the first available one
   Future<ApiEndpoint?> pollEndpoints() async {
     VortexLogger.i('Starting API endpoint polling...');
+    DevMode.instance.log(
+      'ApiManager',
+      '开始轮询端点',
+      detail: '端点数量: ${_endpoints.length}',
+    );
 
     if (_endpoints.isEmpty) {
       VortexLogger.w('No endpoints configured');
+      DevMode.instance.log('ApiManager', '没有配置端点', isError: true);
       return null;
     }
 
     for (var i = 0; i < _endpoints.length; i++) {
       final endpoint = _endpoints[i];
+      DevMode.instance.log(
+        'ApiManager',
+        '测试端点 ${i + 1}/${_endpoints.length}',
+        detail: endpoint.url,
+      );
+
       final isAvailable = await testEndpoint(endpoint);
 
       _endpoints[i] = endpoint.copyWith(
@@ -226,17 +289,24 @@ class ApiManager {
       if (isAvailable) {
         _activeEndpoint = _endpoints[i];
         VortexLogger.i('Found active endpoint: ${endpoint.url}');
+        DevMode.instance.log('ApiManager', '找到可用端点', detail: endpoint.url);
         return _activeEndpoint;
       }
     }
 
     VortexLogger.w('No active endpoints found');
+    DevMode.instance.log('ApiManager', '未找到可用端点', isError: true);
     return null;
   }
 
   /// Get the first active endpoint URL or poll if none active
   Future<String?> getActiveEndpointUrl() async {
     if (_activeEndpoint != null) {
+      DevMode.instance.log(
+        'ApiManager',
+        '使用已缓存的端点',
+        detail: _activeEndpoint!.url,
+      );
       return _activeEndpoint!.url;
     }
 

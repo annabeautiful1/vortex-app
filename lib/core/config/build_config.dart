@@ -3,6 +3,7 @@ import 'package:yaml/yaml.dart';
 
 import '../../shared/constants/app_constants.dart';
 import '../utils/logger.dart';
+import '../utils/dev_mode.dart';
 
 /// Panel type enum for build configuration
 enum BuildPanelType { v2board, sspanel }
@@ -71,8 +72,16 @@ class BuildConfig {
     }
 
     try {
+      DevMode.instance.log('BuildConfig', '开始加载 build_config.yaml');
       final yamlString = await rootBundle.loadString('build_config.yaml');
+      DevMode.instance.log(
+        'BuildConfig',
+        'YAML 文件加载成功',
+        detail: '长度: ${yamlString.length}',
+      );
+
       final yaml = loadYaml(yamlString) as YamlMap;
+      DevMode.instance.log('BuildConfig', 'YAML 解析成功');
 
       _instance = BuildConfig._(
         appName: _getString(yaml, 'app_name', 'Vortex'),
@@ -96,9 +105,25 @@ class BuildConfig {
       );
       VortexLogger.i('API endpoints: ${_instance!.apiEndpoints.length}');
 
+      // 详细的调试日志
+      DevMode.instance.log(
+        'BuildConfig',
+        '配置加载完成',
+        detail:
+            '''
+应用名称: ${_instance!.appName}
+中文名称: ${_instance!.appNameCn}
+面板类型: ${_instance!.panelType.name}
+订阅类型: ${_instance!.subscriptionType.isEmpty ? '(未设置)' : _instance!.subscriptionType}
+API 地址数量: ${_instance!.apiEndpoints.length}
+API 地址列表: ${_instance!.apiEndpoints.join(', ')}''',
+      );
+
       return _instance!;
-    } catch (e) {
+    } catch (e, stack) {
       VortexLogger.e('Failed to load build_config.yaml', e);
+      DevMode.instance.error('BuildConfig', '加载配置文件失败', e, stack);
+
       // Return default configuration
       _instance = const BuildConfig._(
         appName: 'Vortex',
@@ -116,6 +141,8 @@ class BuildConfig {
         supportUrl: '',
         telegramUrl: '',
       );
+
+      DevMode.instance.log('BuildConfig', '使用默认配置', detail: 'API 地址为空，需要手动配置');
       return _instance!;
     }
   }

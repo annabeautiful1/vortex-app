@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../domain/auth_provider.dart';
 import '../../../../shared/themes/app_theme.dart';
 import '../../../../core/config/build_config.dart';
+import '../../../../core/utils/dev_mode.dart';
+import '../../../debug/presentation/pages/debug_panel.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -32,6 +34,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   int _countdown = 0;
   Timer? _countdownTimer;
   bool _isSendingCode = false;
+
+  // 开发者模式触发
+  int _logoTapCount = 0;
+  DateTime? _lastLogoTap;
 
   @override
   void initState() {
@@ -61,6 +67,34 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     _nameController.dispose();
     _countdownTimer?.cancel();
     super.dispose();
+  }
+
+  /// 处理 Logo 点击，连续点击 5 次打开调试面板
+  void _handleLogoTap() {
+    final now = DateTime.now();
+
+    // 如果超过 2 秒没有点击，重置计数
+    if (_lastLogoTap != null && now.difference(_lastLogoTap!).inSeconds > 2) {
+      _logoTapCount = 0;
+    }
+
+    _lastLogoTap = now;
+    _logoTapCount++;
+
+    if (_logoTapCount >= 5) {
+      _logoTapCount = 0;
+      _openDebugPanel();
+    }
+  }
+
+  /// 打开调试面板
+  void _openDebugPanel() {
+    // 启用开发者模式
+    DevMode.instance.enable();
+
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const DebugPanel()));
   }
 
   /// 检查邮箱是否在白名单中
@@ -260,18 +294,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Logo placeholder
-                    Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: const Icon(
-                        Icons.cyclone,
-                        size: 80,
-                        color: Colors.white,
+                    // Logo placeholder - 点击 5 次打开调试面板
+                    GestureDetector(
+                      onTap: _handleLogoTap,
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: const Icon(
+                          Icons.cyclone,
+                          size: 80,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -321,10 +358,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         if (size.width <= 800) ...[
-                          Icon(
-                            Icons.cyclone,
-                            size: 64,
-                            color: AppTheme.primaryColor,
+                          GestureDetector(
+                            onTap: _handleLogoTap,
+                            child: Icon(
+                              Icons.cyclone,
+                              size: 64,
+                              color: AppTheme.primaryColor,
+                            ),
                           ),
                           const SizedBox(height: 16),
                           Text(
