@@ -1,13 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../shared/models/user.dart';
 import '../../../core/api/api_manager.dart';
 import '../../../shared/services/storage_service.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../core/utils/logger.dart';
-
-part 'auth_provider.g.dart';
 
 /// Auth state
 class AuthState {
@@ -38,13 +35,10 @@ class AuthState {
   }
 }
 
-/// Auth provider
-@riverpod
-class Auth extends _$Auth {
-  @override
-  AuthState build() {
+/// Auth notifier
+class AuthNotifier extends StateNotifier<AuthState> {
+  AuthNotifier() : super(const AuthState()) {
     _checkStoredSession();
-    return const AuthState();
   }
 
   Future<void> _checkStoredSession() async {
@@ -140,7 +134,6 @@ class Auth extends _$Auth {
         data: requestData,
       );
 
-      // Auto login after register
       await login(email: email, password: password);
 
       VortexLogger.i('User registered: $email');
@@ -216,4 +209,7 @@ class Auth extends _$Auth {
   }
 }
 
-final authProvider = AuthProvider();
+/// Auth provider
+final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+  return AuthNotifier();
+});

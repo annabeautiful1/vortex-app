@@ -12,20 +12,17 @@ dependencies:
 
   # UI & Icons
   cupertino_icons: ^1.0.8
-  flutter_svg: ^2.0.10+1
   google_fonts: ^6.2.1
   flutter_animate: ^4.5.0
 
   # State Management
   flutter_riverpod: ^2.6.1
-  riverpod_annotation: ^2.6.1
 
   # Navigation
   go_router: ^14.6.2
 
   # Network & API
   dio: ^5.7.0
-  connectivity_plus: ^6.1.0
 
   # Local Storage
   shared_preferences: ^2.3.3
@@ -34,44 +31,15 @@ dependencies:
   hive_flutter: ^1.1.0
 
   # Utils
-  freezed_annotation: ^2.4.4
-  json_annotation: ^4.9.0
   logger: ^2.5.0
   path_provider: ^2.1.5
   package_info_plus: ^8.1.1
   url_launcher: ^6.3.1
-  intl: ^0.20.1
-  uuid: ^4.5.1
-
-  # Platform specific
-  window_manager: ^0.4.3  # Windows/macOS window control
-  tray_manager: ^0.2.3   # System tray
-  local_notifier: ^0.1.6
-
-  # In-App Purchase
-  in_app_purchase: ^3.2.0
-
-  # FFI for Rust core
-  ffi: ^2.1.3
-
-  # Permissions
-  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-
-  # Code generation
-  build_runner: ^2.4.13
-  freezed: ^2.5.7
-  json_serializable: ^6.8.0
-  riverpod_generator: ^2.6.3
-  hive_generator: ^2.0.1
-
-  # Testing
-  mockito: ^5.4.4
-  mocktail: ^1.0.4
 
 flutter:
   uses-material-design: true
@@ -79,9 +47,3 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
-    - assets/fonts/
-
-  fonts:
-    - family: VortexIcons
-      fonts:
-        - asset: assets/fonts/VortexIcons.ttf

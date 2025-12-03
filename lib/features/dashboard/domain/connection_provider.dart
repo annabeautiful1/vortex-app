@@ -1,11 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../shared/models/proxy_node.dart';
 import '../../../core/proxy/proxy_core.dart';
 import '../../../core/utils/logger.dart';
-
-part 'connection_provider.g.dart';
 
 enum ConnectionStatus {
   disconnected,
@@ -46,12 +43,8 @@ class ConnectionState {
   }
 }
 
-@riverpod
-class Connection extends _$Connection {
-  @override
-  ConnectionState build() {
-    return const ConnectionState();
-  }
+class ConnectionNotifier extends StateNotifier<ConnectionState> {
+  ConnectionNotifier() : super(const ConnectionState());
 
   Future<void> connect({ProxyNode? node}) async {
     state = state.copyWith(
@@ -67,7 +60,6 @@ class Connection extends _$Connection {
 
       await ProxyCore.instance.connect(targetNode);
 
-      // Test latency after connection
       final latency = await ProxyCore.instance.testLatency(targetNode);
 
       state = state.copyWith(
@@ -127,10 +119,10 @@ class Connection extends _$Connection {
   }
 
   Future<ProxyNode?> _getDefaultNode() async {
-    // Get the first available node or last selected node
-    // This should be implemented based on stored preferences
     return null;
   }
 }
 
-final connectionProvider = ConnectionProvider();
+final connectionProvider = StateNotifierProvider<ConnectionNotifier, ConnectionState>((ref) {
+  return ConnectionNotifier();
+});

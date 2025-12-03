@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../shared/models/proxy_node.dart';
 import '../../../core/proxy/proxy_core.dart';
@@ -7,8 +6,6 @@ import '../../../core/api/api_manager.dart';
 import '../../../shared/services/storage_service.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../core/utils/logger.dart';
-
-part 'nodes_provider.g.dart';
 
 class NodesState {
   final List<ProxyNode> nodes;
@@ -38,12 +35,9 @@ class NodesState {
   }
 }
 
-@riverpod
-class Nodes extends _$Nodes {
-  @override
-  NodesState build() {
+class NodesNotifier extends StateNotifier<NodesState> {
+  NodesNotifier() : super(const NodesState()) {
     _loadCachedNodes();
-    return const NodesState();
   }
 
   Future<void> _loadCachedNodes() async {
@@ -70,7 +64,6 @@ class Nodes extends _$Nodes {
         throw Exception('未登录');
       }
 
-      // Get subscription URL
       final userResponse = await ApiManager.instance.request(
         endpoint.panelType == AppConstants.panelV2Board
             ? '/api/v1/user/getSubscribe'
@@ -81,30 +74,23 @@ class Nodes extends _$Nodes {
       String subscribeUrl;
       if (endpoint.panelType == AppConstants.panelV2Board) {
         subscribeUrl = userResponse.data['data']['subscribe_url'];
-
-        // Add subscription type parameter
         final subType = endpoint.subscriptionType ?? 'clashmeta';
         subscribeUrl = '$subscribeUrl&flag=$subType';
       } else {
         subscribeUrl = userResponse.data['data']['url'];
-
-        // Add SSPanel subscription type
         final subType = endpoint.subscriptionType ?? '1';
         subscribeUrl = '$subscribeUrl?clash=$subType';
       }
 
       VortexLogger.subscription('fetch', subscribeUrl);
 
-      // Fetch subscription content
       final subResponse = await ApiManager.instance.request(
         subscribeUrl,
         method: 'GET',
       );
 
-      // Parse nodes from subscription
       final nodes = _parseSubscription(subResponse.data, endpoint.panelType);
 
-      // Cache nodes
       await StorageService.instance.putObject(
         AppConstants.serverListKey,
         nodes.map((e) => e.toJson()).toList(),
@@ -128,7 +114,6 @@ class Nodes extends _$Nodes {
   List<ProxyNode> _parseSubscription(dynamic data, String panelType) {
     final nodes = <ProxyNode>[];
 
-    // Parse Clash format subscription
     if (data is Map<String, dynamic>) {
       final proxies = data['proxies'] as List?;
       if (proxies != null) {
@@ -152,7 +137,6 @@ class Nodes extends _$Nodes {
       final protocol = _getProtocolType(type);
       if (protocol == null) return null;
 
-      // Extract tags from name
       final name = proxy['name'] as String? ?? '';
       final tags = _extractTags(name);
       final multiplier = _extractMultiplier(name);
@@ -206,7 +190,6 @@ class Nodes extends _$Nodes {
 
   Map<String, dynamic> _extractSettings(Map<String, dynamic> proxy, ProtocolType protocol) {
     final settings = Map<String, dynamic>.from(proxy);
-    // Remove common fields
     settings.remove('name');
     settings.remove('server');
     settings.remove('port');
@@ -242,7 +225,6 @@ class Nodes extends _$Nodes {
   }
 
   double _extractMultiplier(String name) {
-    // Match patterns like "0.5x", "2x", "1.5倍"
     final regex = RegExp(r'(\d+\.?\d*)\s*[xX倍]');
     final match = regex.firstMatch(name);
     if (match != null) {
@@ -270,4 +252,6 @@ class Nodes extends _$Nodes {
   }
 }
 
-final nodesProvider = NodesProvider();
+final nodesProvider = StateNotifierProvider<NodesNotifier, NodesState>((ref) {
+  return NodesNotifier();
+});

@@ -1,26 +1,68 @@
 import 'package:dio/dio.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
 import '../utils/logger.dart';
 import '../../shared/constants/app_constants.dart';
 
-part 'api_manager.freezed.dart';
-part 'api_manager.g.dart';
-
 /// API endpoint configuration
-@freezed
-class ApiEndpoint with _$ApiEndpoint {
-  const factory ApiEndpoint({
-    required String url,
-    required String panelType, // 'sspanel' or 'v2board'
-    String? subscriptionType, // 'clashmeta', 'meta', '1', '2', '3', '4'
-    @Default(false) bool isActive,
-    @Default(0) int priority,
-    DateTime? lastChecked,
-    @Default(0) int failCount,
-  }) = _ApiEndpoint;
+class ApiEndpoint {
+  final String url;
+  final String panelType; // 'sspanel' or 'v2board'
+  final String? subscriptionType; // 'clashmeta', 'meta', '1', '2', '3', '4'
+  final bool isActive;
+  final int priority;
+  final DateTime? lastChecked;
+  final int failCount;
 
-  factory ApiEndpoint.fromJson(Map<String, dynamic> json) =>
-      _$ApiEndpointFromJson(json);
+  const ApiEndpoint({
+    required this.url,
+    required this.panelType,
+    this.subscriptionType,
+    this.isActive = false,
+    this.priority = 0,
+    this.lastChecked,
+    this.failCount = 0,
+  });
+
+  ApiEndpoint copyWith({
+    String? url,
+    String? panelType,
+    String? subscriptionType,
+    bool? isActive,
+    int? priority,
+    DateTime? lastChecked,
+    int? failCount,
+  }) {
+    return ApiEndpoint(
+      url: url ?? this.url,
+      panelType: panelType ?? this.panelType,
+      subscriptionType: subscriptionType ?? this.subscriptionType,
+      isActive: isActive ?? this.isActive,
+      priority: priority ?? this.priority,
+      lastChecked: lastChecked ?? this.lastChecked,
+      failCount: failCount ?? this.failCount,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'url': url,
+    'panelType': panelType,
+    'subscriptionType': subscriptionType,
+    'isActive': isActive,
+    'priority': priority,
+    'lastChecked': lastChecked?.toIso8601String(),
+    'failCount': failCount,
+  };
+
+  factory ApiEndpoint.fromJson(Map<String, dynamic> json) => ApiEndpoint(
+    url: json['url'] as String,
+    panelType: json['panelType'] as String,
+    subscriptionType: json['subscriptionType'] as String?,
+    isActive: json['isActive'] as bool? ?? false,
+    priority: json['priority'] as int? ?? 0,
+    lastChecked: json['lastChecked'] != null
+        ? DateTime.parse(json['lastChecked'] as String)
+        : null,
+    failCount: json['failCount'] as int? ?? 0,
+  );
 }
 
 /// API Manager for handling multiple OSS/API endpoints with auto-polling
@@ -102,12 +144,9 @@ class ApiManager {
       );
 
       if (response.statusCode == 200) {
-        // Verify response contains expected fields
         if (endpoint.panelType == AppConstants.panelV2Board) {
-          // V2board returns JSON with data field
           return response.data != null;
         } else {
-          // SSPanel returns JSON with specific fields
           final data = response.data;
           return data != null &&
               (data['is_email_verify'] != null || data['app_description'] != null);
@@ -124,18 +163,18 @@ class ApiManager {
   Future<ApiEndpoint?> pollEndpoints() async {
     VortexLogger.i('Starting API endpoint polling...');
 
-    for (var endpoint in _endpoints) {
+    for (var i = 0; i < _endpoints.length; i++) {
+      final endpoint = _endpoints[i];
       final isAvailable = await testEndpoint(endpoint);
 
-      final index = _endpoints.indexOf(endpoint);
-      _endpoints[index] = endpoint.copyWith(
+      _endpoints[i] = endpoint.copyWith(
         lastChecked: DateTime.now(),
         isActive: isAvailable,
         failCount: isAvailable ? 0 : endpoint.failCount + 1,
       );
 
       if (isAvailable) {
-        _activeEndpoint = _endpoints[index];
+        _activeEndpoint = _endpoints[i];
         VortexLogger.i('Found active endpoint: ${endpoint.url}');
         return _activeEndpoint;
       }

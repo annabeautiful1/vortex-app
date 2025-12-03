@@ -1,9 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/utils/logger.dart';
-
-part 'support_provider.g.dart';
 
 class ChatMessage {
   final String id;
@@ -45,12 +42,8 @@ class SupportState {
   }
 }
 
-@riverpod
-class Support extends _$Support {
-  @override
-  SupportState build() {
-    return const SupportState();
-  }
+class SupportNotifier extends StateNotifier<SupportState> {
+  SupportNotifier() : super(const SupportState());
 
   void sendMessage(String text) {
     final message = ChatMessage(
@@ -65,9 +58,6 @@ class Support extends _$Support {
     );
 
     VortexLogger.i('Sent message: $text');
-
-    // TODO: Send to server and handle response
-    // This would integrate with Telegram bot or custom support system
   }
 
   void sendImage(String imagePath) {
@@ -100,4 +90,6 @@ class Support extends _$Support {
   }
 }
 
-final supportProvider = SupportProvider();
+final supportProvider = StateNotifierProvider<SupportNotifier, SupportState>((ref) {
+  return SupportNotifier();
+});
