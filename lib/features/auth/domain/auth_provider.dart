@@ -283,12 +283,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
+      // 确保 API 客户端已初始化
+      await _ensureApiClientInitialized();
+
       if (state.panelType == PanelType.v2board && _v2boardApi != null) {
         await _loginV2board(email: email, password: password);
       } else if (state.panelType == PanelType.sspanel && _sspanelApi != null) {
         await _loginSSPanel(email: email, password: password, code2FA: code2FA);
       } else {
-        throw Exception('请先选择服务器');
+        throw Exception('无法连接服务器，请检查网络');
       }
 
       VortexLogger.i('User logged in: $email');
@@ -296,6 +299,35 @@ class AuthNotifier extends StateNotifier<AuthState> {
       VortexLogger.e('Login failed', e);
       state = state.copyWith(isLoading: false, error: e.toString());
       rethrow;
+    }
+  }
+
+  /// 确保 API 客户端已初始化
+  Future<void> _ensureApiClientInitialized() async {
+    // 如果已经有 API 客户端，直接返回
+    if (_v2boardApi != null || _sspanelApi != null) {
+      return;
+    }
+
+    final config = BuildConfig.instance;
+    final buildPanelType = config.isV2board
+        ? PanelType.v2board
+        : PanelType.sspanel;
+
+    // 尝试从 BuildConfig 获取 API 地址
+    String? baseUrl;
+    if (config.hasApiEndpoints) {
+      baseUrl = await ApiManager.instance.getActiveEndpointUrl();
+    }
+
+    // 如果没有配置 API 地址，尝试从存储中获取
+    baseUrl ??= await StorageService.instance.getSecure(
+      AppConstants.apiEndpointsKey,
+    );
+
+    if (baseUrl != null) {
+      await _initApiClient(baseUrl, buildPanelType);
+      state = state.copyWith(baseUrl: baseUrl, panelType: buildPanelType);
     }
   }
 
