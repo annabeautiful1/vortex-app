@@ -5,6 +5,7 @@ import '../../../../shared/models/proxy_node.dart';
 import '../../../../shared/themes/app_theme.dart';
 import '../../domain/nodes_provider.dart';
 import '../../../dashboard/domain/connection_provider.dart';
+import '../../../auth/domain/auth_provider.dart';
 
 class NodesPage extends ConsumerWidget {
   const NodesPage({super.key});
@@ -51,10 +52,31 @@ class NodesPage extends ConsumerWidget {
                       ),
                       IconButton(
                         onPressed: () async {
-                          // TODO: Get subscribe URL from auth provider
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('请先登录并获取订阅')),
-                          );
+                          final authState = ref.read(authProvider);
+                          final subscribeUrl =
+                              authState.user?.subscription.subscriptionUrl;
+                          if (subscribeUrl != null && subscribeUrl.isNotEmpty) {
+                            try {
+                              await ref
+                                  .read(nodesProvider.notifier)
+                                  .refreshNodesFromUrl(subscribeUrl);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('节点更新成功')),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('更新失败: $e')),
+                                );
+                              }
+                            }
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('请先登录并获取订阅')),
+                            );
+                          }
                         },
                         icon: const Icon(Icons.refresh),
                         tooltip: '刷新订阅',
