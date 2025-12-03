@@ -269,9 +269,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Get guest config (using ApiManager compatibility mode)
-  Future<Map<String, dynamic>?> getGuestConfig() async {
-    return await ApiManager.instance.getGuestConfig();
+  /// Get guest config and update state
+  Future<GuestConfig?> getGuestConfig() async {
+    // 确保 API 客户端已初始化
+    await _ensureApiClientInitialized();
+
+    try {
+      if (state.panelType == PanelType.v2board && _v2boardApi != null) {
+        final v2config = await _v2boardApi!.getGuestConfig();
+        final config = GuestConfig.fromV2board(v2config);
+        state = state.copyWith(guestConfig: config);
+        return config;
+      } else if (state.panelType == PanelType.sspanel && _sspanelApi != null) {
+        final ssconfig = await _sspanelApi!.getGuestConfig();
+        final config = GuestConfig.fromSSPanel(ssconfig);
+        state = state.copyWith(guestConfig: config);
+        return config;
+      }
+    } catch (e) {
+      VortexLogger.e('Failed to get guest config', e);
+    }
+    return null;
   }
 
   /// Login
