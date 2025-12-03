@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:ffi';
-import 'package:ffi/ffi.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../shared/models/proxy_node.dart';
@@ -19,6 +18,7 @@ class ProxyCore {
   ProxyNode? _currentNode;
 
   // Native library for Clash.Meta core (will be loaded via FFI)
+  // ignore: unused_field
   DynamicLibrary? _clashLib;
 
   Future<void> init() async {

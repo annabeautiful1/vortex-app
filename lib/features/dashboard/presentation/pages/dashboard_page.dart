@@ -5,7 +5,6 @@ import '../widgets/connection_button.dart';
 import '../widgets/status_card.dart';
 import '../widgets/traffic_card.dart';
 import '../widgets/quick_actions.dart';
-import '../../../../shared/themes/app_theme.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});

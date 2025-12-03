@@ -11,14 +11,14 @@ enum ConnectionStatus {
   disconnecting,
 }
 
-class ConnectionState {
+class VpnConnectionState {
   final ConnectionStatus status;
   final ProxyNode? connectedNode;
   final bool tunEnabled;
   final int? latency;
   final String? error;
 
-  const ConnectionState({
+  const VpnConnectionState({
     this.status = ConnectionStatus.disconnected,
     this.connectedNode,
     this.tunEnabled = false,
@@ -26,14 +26,14 @@ class ConnectionState {
     this.error,
   });
 
-  ConnectionState copyWith({
+  VpnConnectionState copyWith({
     ConnectionStatus? status,
     ProxyNode? connectedNode,
     bool? tunEnabled,
     int? latency,
     String? error,
   }) {
-    return ConnectionState(
+    return VpnConnectionState(
       status: status ?? this.status,
       connectedNode: connectedNode ?? this.connectedNode,
       tunEnabled: tunEnabled ?? this.tunEnabled,
@@ -43,8 +43,8 @@ class ConnectionState {
   }
 }
 
-class ConnectionNotifier extends StateNotifier<ConnectionState> {
-  ConnectionNotifier() : super(const ConnectionState());
+class ConnectionNotifier extends StateNotifier<VpnConnectionState> {
+  ConnectionNotifier() : super(const VpnConnectionState());
 
   Future<void> connect({ProxyNode? node}) async {
     state = state.copyWith(
@@ -84,7 +84,7 @@ class ConnectionNotifier extends StateNotifier<ConnectionState> {
     try {
       await ProxyCore.instance.disconnect();
 
-      state = const ConnectionState(
+      state = const VpnConnectionState(
         status: ConnectionStatus.disconnected,
       );
 
@@ -123,6 +123,6 @@ class ConnectionNotifier extends StateNotifier<ConnectionState> {
   }
 }
 
-final connectionProvider = StateNotifierProvider<ConnectionNotifier, ConnectionState>((ref) {
+final connectionProvider = StateNotifierProvider<ConnectionNotifier, VpnConnectionState>((ref) {
   return ConnectionNotifier();
 });

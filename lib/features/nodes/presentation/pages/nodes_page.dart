@@ -107,7 +107,7 @@ class NodesPage extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     NodesState nodesState,
-    ConnectionState connectionState,
+    VpnConnectionState connectionState,
   ) {
     // Group nodes by group name
     final groupedNodes = <String, List<ProxyNode>>{};
