@@ -77,33 +77,37 @@ class ApiManager {
   ApiEndpoint? _activeEndpoint;
 
   void init() {
-    _dio = Dio(BaseOptions(
-      connectTimeout: AppConstants.connectTimeout,
-      receiveTimeout: AppConstants.apiTimeout,
-      sendTimeout: AppConstants.apiTimeout,
-    ));
+    _dio = Dio(
+      BaseOptions(
+        connectTimeout: AppConstants.connectTimeout,
+        receiveTimeout: AppConstants.apiTimeout,
+        sendTimeout: AppConstants.apiTimeout,
+      ),
+    );
 
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) {
-        VortexLogger.api(options.method, options.uri.toString());
-        return handler.next(options);
-      },
-      onResponse: (response, handler) {
-        VortexLogger.api(
-          response.requestOptions.method,
-          response.requestOptions.uri.toString(),
-          statusCode: response.statusCode,
-        );
-        return handler.next(response);
-      },
-      onError: (error, handler) {
-        VortexLogger.e(
-          'API Error: ${error.requestOptions.uri}',
-          error.message,
-        );
-        return handler.next(error);
-      },
-    ));
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          VortexLogger.api(options.method, options.uri.toString());
+          return handler.next(options);
+        },
+        onResponse: (response, handler) {
+          VortexLogger.api(
+            response.requestOptions.method,
+            response.requestOptions.uri.toString(),
+            statusCode: response.statusCode,
+          );
+          return handler.next(response);
+        },
+        onError: (error, handler) {
+          VortexLogger.e(
+            'API Error: ${error.requestOptions.uri}',
+            error.message,
+          );
+          return handler.next(error);
+        },
+      ),
+    );
   }
 
   /// Add API endpoint
@@ -138,9 +142,7 @@ class ApiManager {
 
       final response = await _dio.get(
         testUrl,
-        options: Options(
-          receiveTimeout: AppConstants.pingTimeout,
-        ),
+        options: Options(receiveTimeout: AppConstants.pingTimeout),
       );
 
       if (response.statusCode == 200) {
@@ -149,7 +151,8 @@ class ApiManager {
         } else {
           final data = response.data;
           return data != null &&
-              (data['is_email_verify'] != null || data['app_description'] != null);
+              (data['is_email_verify'] != null ||
+                  data['app_description'] != null);
         }
       }
       return false;

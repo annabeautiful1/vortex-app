@@ -30,15 +30,10 @@ class AppTheme {
         brightness: Brightness.light,
       ),
       textTheme: GoogleFonts.interTextTheme(),
-      appBarTheme: const AppBarTheme(
-        centerTitle: true,
-        elevation: 0,
-      ),
+      appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
       cardTheme: CardThemeData(
         elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -54,13 +49,19 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: Colors.grey.shade50,
         selectedIconTheme: const IconThemeData(color: primaryColor),
         unselectedIconTheme: IconThemeData(color: Colors.grey.shade600),
-        selectedLabelTextStyle: const TextStyle(color: primaryColor, fontWeight: FontWeight.w600),
+        selectedLabelTextStyle: const TextStyle(
+          color: primaryColor,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -84,9 +85,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         elevation: 2,
         color: const Color(0xFF1E293B),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -103,13 +102,19 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
       navigationRailTheme: const NavigationRailThemeData(
         backgroundColor: Color(0xFF1E293B),
         selectedIconTheme: IconThemeData(color: primaryColor),
         unselectedIconTheme: IconThemeData(color: Colors.grey),
-        selectedLabelTextStyle: TextStyle(color: primaryColor, fontWeight: FontWeight.w600),
+        selectedLabelTextStyle: TextStyle(
+          color: primaryColor,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

@@ -14,13 +14,13 @@ enum ProtocolType {
 
 /// Node tag types for display
 enum NodeTag {
-  unlock,      // 解锁
-  gaming,      // 游戏
-  streaming,   // 流媒体
-  chatgpt,     // ChatGPT
-  netflix,     // Netflix
-  disney,      // Disney+
-  custom,      // 自定义
+  unlock, // 解锁
+  gaming, // 游戏
+  streaming, // 流媒体
+  chatgpt, // ChatGPT
+  netflix, // Netflix
+  disney, // Disney+
+  custom, // 自定义
 }
 
 /// Proxy node model
@@ -115,12 +115,16 @@ class ProxyNode {
     settings: Map<String, dynamic>.from(json['settings'] as Map? ?? {}),
     group: json['group'] as String?,
     multiplier: (json['multiplier'] as num?)?.toDouble() ?? 1.0,
-    tags: (json['tags'] as List?)
-        ?.map((t) => NodeTag.values.firstWhere(
-              (e) => e.name == t,
-              orElse: () => NodeTag.custom,
-            ))
-        .toList() ?? [],
+    tags:
+        (json['tags'] as List?)
+            ?.map(
+              (t) => NodeTag.values.firstWhere(
+                (e) => e.name == t,
+                orElse: () => NodeTag.custom,
+              ),
+            )
+            .toList() ??
+        [],
     customTag: json['customTag'] as String?,
     isSelected: json['isSelected'] as bool? ?? false,
     latency: json['latency'] as int?,

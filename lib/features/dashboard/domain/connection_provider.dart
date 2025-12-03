@@ -4,12 +4,7 @@ import '../../../shared/models/proxy_node.dart';
 import '../../../core/proxy/proxy_core.dart';
 import '../../../core/utils/logger.dart';
 
-enum ConnectionStatus {
-  disconnected,
-  connecting,
-  connected,
-  disconnecting,
-}
+enum ConnectionStatus { disconnected, connecting, connected, disconnecting }
 
 class VpnConnectionState {
   final ConnectionStatus status;
@@ -47,10 +42,7 @@ class ConnectionNotifier extends StateNotifier<VpnConnectionState> {
   ConnectionNotifier() : super(const VpnConnectionState());
 
   Future<void> connect({ProxyNode? node}) async {
-    state = state.copyWith(
-      status: ConnectionStatus.connecting,
-      error: null,
-    );
+    state = state.copyWith(status: ConnectionStatus.connecting, error: null);
 
     try {
       final targetNode = node ?? await _getDefaultNode();
@@ -84,9 +76,7 @@ class ConnectionNotifier extends StateNotifier<VpnConnectionState> {
     try {
       await ProxyCore.instance.disconnect();
 
-      state = const VpnConnectionState(
-        status: ConnectionStatus.disconnected,
-      );
+      state = const VpnConnectionState(status: ConnectionStatus.disconnected);
 
       VortexLogger.i('Disconnected');
     } catch (e) {
@@ -123,6 +113,7 @@ class ConnectionNotifier extends StateNotifier<VpnConnectionState> {
   }
 }
 
-final connectionProvider = StateNotifierProvider<ConnectionNotifier, VpnConnectionState>((ref) {
-  return ConnectionNotifier();
-});
+final connectionProvider =
+    StateNotifierProvider<ConnectionNotifier, VpnConnectionState>((ref) {
+      return ConnectionNotifier();
+    });

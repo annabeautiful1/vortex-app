@@ -41,7 +41,9 @@ class NodesNotifier extends StateNotifier<NodesState> {
   }
 
   Future<void> _loadCachedNodes() async {
-    final cached = StorageService.instance.getObject(AppConstants.serverListKey);
+    final cached = StorageService.instance.getObject(
+      AppConstants.serverListKey,
+    );
     if (cached != null && cached is List) {
       final nodes = cached
           .map((e) => ProxyNode.fromJson(e as Map<String, dynamic>))
@@ -59,7 +61,9 @@ class NodesNotifier extends StateNotifier<NodesState> {
         throw Exception(ErrorMessages.noValidApi);
       }
 
-      final token = await StorageService.instance.getSecure(AppConstants.tokenKey);
+      final token = await StorageService.instance.getSecure(
+        AppConstants.tokenKey,
+      );
       if (token == null) {
         throw Exception('未登录');
       }
@@ -96,18 +100,12 @@ class NodesNotifier extends StateNotifier<NodesState> {
         nodes.map((e) => e.toJson()).toList(),
       );
 
-      state = state.copyWith(
-        nodes: nodes,
-        isLoading: false,
-      );
+      state = state.copyWith(nodes: nodes, isLoading: false);
 
       VortexLogger.i('Loaded ${nodes.length} nodes');
     } catch (e) {
       VortexLogger.e('Failed to refresh nodes', e);
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
@@ -188,7 +186,10 @@ class NodesNotifier extends StateNotifier<NodesState> {
     }
   }
 
-  Map<String, dynamic> _extractSettings(Map<String, dynamic> proxy, ProtocolType protocol) {
+  Map<String, dynamic> _extractSettings(
+    Map<String, dynamic> proxy,
+    ProtocolType protocol,
+  ) {
     final settings = Map<String, dynamic>.from(proxy);
     settings.remove('name');
     settings.remove('server');
@@ -211,7 +212,9 @@ class NodesNotifier extends StateNotifier<NodesState> {
     if (lowerName.contains('流媒体') || lowerName.contains('stream')) {
       tags.add(NodeTag.streaming);
     }
-    if (lowerName.contains('chatgpt') || lowerName.contains('gpt') || lowerName.contains('openai')) {
+    if (lowerName.contains('chatgpt') ||
+        lowerName.contains('gpt') ||
+        lowerName.contains('openai')) {
       tags.add(NodeTag.chatgpt);
     }
     if (lowerName.contains('netflix') || lowerName.contains('nf')) {
@@ -238,10 +241,7 @@ class NodesNotifier extends StateNotifier<NodesState> {
 
     final latencies = await ProxyCore.instance.testAllLatencies(state.nodes);
 
-    state = state.copyWith(
-      latencies: latencies,
-      isLoading: false,
-    );
+    state = state.copyWith(latencies: latencies, isLoading: false);
   }
 
   Future<void> testLatency(ProxyNode node) async {

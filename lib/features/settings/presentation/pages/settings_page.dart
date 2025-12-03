@@ -15,8 +15,8 @@ class SettingsPage extends StatelessWidget {
               Text(
                 '设置',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 24),
 
@@ -28,28 +28,19 @@ class SettingsPage extends StatelessWidget {
                     icon: Icons.rocket_launch,
                     title: '开机启动',
                     subtitle: '系统启动时自动运行',
-                    trailing: Switch(
-                      value: false,
-                      onChanged: (value) {},
-                    ),
+                    trailing: Switch(value: false, onChanged: (value) {}),
                   ),
                   _SettingsTile(
                     icon: Icons.wifi_tethering,
                     title: 'TUN 模式',
                     subtitle: '代理全部系统流量',
-                    trailing: Switch(
-                      value: false,
-                      onChanged: (value) {},
-                    ),
+                    trailing: Switch(value: false, onChanged: (value) {}),
                   ),
                   _SettingsTile(
                     icon: Icons.lan,
                     title: '允许局域网连接',
                     subtitle: '允许其他设备通过本机代理',
-                    trailing: Switch(
-                      value: false,
-                      onChanged: (value) {},
-                    ),
+                    trailing: Switch(value: false, onChanged: (value) {}),
                   ),
                 ],
               ),
@@ -95,10 +86,7 @@ class SettingsPage extends StatelessWidget {
                     icon: Icons.update,
                     title: '自动更新订阅',
                     subtitle: '每次启动时更新',
-                    trailing: Switch(
-                      value: true,
-                      onChanged: (value) {},
-                    ),
+                    trailing: Switch(value: true, onChanged: (value) {}),
                   ),
                   _SettingsTile(
                     icon: Icons.link,
@@ -176,10 +164,7 @@ class _SettingsSection extends StatelessWidget {
   final String title;
   final List<Widget> children;
 
-  const _SettingsSection({
-    required this.title,
-    required this.children,
-  });
+  const _SettingsSection({required this.title, required this.children});
 
   @override
   Widget build(BuildContext context) {
@@ -189,16 +174,14 @@ class _SettingsSection extends StatelessWidget {
         Text(
           title,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         const SizedBox(height: 12),
         Card(
           margin: EdgeInsets.zero,
-          child: Column(
-            children: children,
-          ),
+          child: Column(children: children),
         ),
       ],
     );
@@ -226,12 +209,10 @@ class _SettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(icon, color: textColor),
-      title: Text(
-        title,
-        style: TextStyle(color: textColor),
-      ),
+      title: Text(title, style: TextStyle(color: textColor)),
       subtitle: subtitle != null ? Text(subtitle!) : null,
-      trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right) : null),
+      trailing:
+          trailing ?? (onTap != null ? const Icon(Icons.chevron_right) : null),
       onTap: onTap,
     );
   }

@@ -58,7 +58,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     try {
       if (_isRegisterMode) {
-        await ref.read(authProvider.notifier).register(
+        await ref
+            .read(authProvider.notifier)
+            .register(
               email: _emailController.text.trim(),
               password: _passwordController.text,
               inviteCode: _inviteCodeController.text.trim().isEmpty
@@ -66,7 +68,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   : _inviteCodeController.text.trim(),
             );
       } else {
-        await ref.read(authProvider.notifier).login(
+        await ref
+            .read(authProvider.notifier)
+            .login(
               email: _emailController.text.trim(),
               password: _passwordController.text,
             );
@@ -105,10 +109,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      AppTheme.primaryColor,
-                      AppTheme.secondaryColor,
-                    ],
+                    colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
                   ),
                 ),
                 child: Column(
@@ -222,8 +223,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               return '请输入有效的邮箱地址';
                             }
                             // Check email whitelist if configured
-                            if (_guestConfig?['email_whitelist_suffix'] != null) {
-                              final whitelist = _guestConfig!['email_whitelist_suffix'] as List;
+                            if (_guestConfig?['email_whitelist_suffix'] !=
+                                null) {
+                              final whitelist =
+                                  _guestConfig!['email_whitelist_suffix']
+                                      as List;
                               if (whitelist.isNotEmpty) {
                                 final domain = value.split('@').last;
                                 if (!whitelist.contains(domain)) {
@@ -273,10 +277,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           TextFormField(
                             controller: _inviteCodeController,
                             decoration: InputDecoration(
-                              labelText: _guestConfig?['is_invite_force'] == true
+                              labelText:
+                                  _guestConfig?['is_invite_force'] == true
                                   ? '邀请码 (必填)'
                                   : '邀请码 (选填)',
-                              prefixIcon: const Icon(Icons.card_giftcard_outlined),
+                              prefixIcon: const Icon(
+                                Icons.card_giftcard_outlined,
+                              ),
                             ),
                             validator: (value) {
                               if (_guestConfig?['is_invite_force'] == true) {

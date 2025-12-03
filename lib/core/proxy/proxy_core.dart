@@ -185,10 +185,7 @@ class ProxyCore {
       'dns': {
         'enable': true,
         'enhanced-mode': 'fake-ip',
-        'nameserver': [
-          '8.8.8.8',
-          '1.1.1.1',
-        ],
+        'nameserver': ['8.8.8.8', '1.1.1.1'],
       },
       'proxies': [_nodeToProxy(node)],
       'proxy-groups': [
@@ -198,9 +195,7 @@ class ProxyCore {
           'proxies': [node.name],
         },
       ],
-      'rules': [
-        'MATCH,Proxy',
-      ],
+      'rules': ['MATCH,Proxy'],
     };
 
     if (_tunEnabled) {

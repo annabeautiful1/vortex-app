@@ -13,10 +13,7 @@ import 'features/support/presentation/pages/support_page.dart';
 final _router = GoRouter(
   initialLocation: '/login',
   routes: [
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginPage(),
-    ),
+    GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
     ShellRoute(
       builder: (context, state, child) => MainShell(child: child),
       routes: [
@@ -24,10 +21,7 @@ final _router = GoRouter(
           path: '/dashboard',
           builder: (context, state) => const DashboardPage(),
         ),
-        GoRoute(
-          path: '/nodes',
-          builder: (context, state) => const NodesPage(),
-        ),
+        GoRoute(path: '/nodes', builder: (context, state) => const NodesPage()),
         GoRoute(
           path: '/settings',
           builder: (context, state) => const SettingsPage(),
@@ -75,7 +69,8 @@ class MainShell extends StatelessWidget {
         children: [
           NavigationRail(
             selectedIndex: _getSelectedIndex(context),
-            onDestinationSelected: (index) => _onDestinationSelected(context, index),
+            onDestinationSelected: (index) =>
+                _onDestinationSelected(context, index),
             labelType: NavigationRailLabelType.all,
             destinations: const [
               NavigationRailDestination(

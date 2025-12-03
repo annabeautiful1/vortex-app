@@ -27,16 +27,15 @@ class DashboardPage extends ConsumerWidget {
                     children: [
                       Text(
                         'Dashboard',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '欢迎使用 Vortex 漩涡',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -53,9 +52,7 @@ class DashboardPage extends ConsumerWidget {
               const SizedBox(height: 32),
 
               // Connection button - center piece
-              const Center(
-                child: ConnectionButton(),
-              ),
+              const Center(child: ConnectionButton()),
               const SizedBox(height: 32),
 
               // Status cards row

@@ -29,28 +29,29 @@ class NodesPage extends ConsumerWidget {
                     children: [
                       Text(
                         '节点列表',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '${nodesState.nodes.length} 个节点可用',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
                   Row(
                     children: [
                       IconButton(
-                        onPressed: () => ref.read(nodesProvider.notifier).testAllLatencies(),
+                        onPressed: () =>
+                            ref.read(nodesProvider.notifier).testAllLatencies(),
                         icon: const Icon(Icons.speed),
                         tooltip: '测速全部',
                       ),
                       IconButton(
-                        onPressed: () => ref.read(nodesProvider.notifier).refreshNodes(),
+                        onPressed: () =>
+                            ref.read(nodesProvider.notifier).refreshNodes(),
                         icon: const Icon(Icons.refresh),
                         tooltip: '刷新订阅',
                       ),
@@ -65,8 +66,8 @@ class NodesPage extends ConsumerWidget {
               child: nodesState.isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : nodesState.nodes.isEmpty
-                      ? _buildEmptyState(context)
-                      : _buildNodesList(context, ref, nodesState, connectionState),
+                  ? _buildEmptyState(context)
+                  : _buildNodesList(context, ref, nodesState, connectionState),
             ),
           ],
         ),
@@ -79,24 +80,20 @@ class NodesPage extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.dns_outlined,
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
+          Icon(Icons.dns_outlined, size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
             '暂无节点',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.grey.shade600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
             '请先更新订阅获取节点',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey.shade500,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade500),
           ),
         ],
       ),
@@ -131,19 +128,21 @@ class NodesPage extends ConsumerWidget {
               child: Text(
                 group,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
             ),
-            ...nodes.map((node) => _NodeTile(
-                  node: node,
-                  isConnected: connectionState.connectedNode?.id == node.id,
-                  latency: nodesState.latencies[node.id],
-                  onTap: () {
-                    ref.read(connectionProvider.notifier).switchNode(node);
-                  },
-                )),
+            ...nodes.map(
+              (node) => _NodeTile(
+                node: node,
+                isConnected: connectionState.connectedNode?.id == node.id,
+                latency: nodesState.latencies[node.id],
+                onTap: () {
+                  ref.read(connectionProvider.notifier).switchNode(node);
+                },
+              ),
+            ),
             const SizedBox(height: 16),
           ],
         );
@@ -169,9 +168,7 @@ class _NodeTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      color: isConnected
-          ? AppTheme.primaryColor.withOpacity(0.1)
-          : null,
+      color: isConnected ? AppTheme.primaryColor.withOpacity(0.1) : null,
       child: ListTile(
         onTap: onTap,
         leading: Container(
@@ -202,14 +199,10 @@ class _NodeTile extends StatelessWidget {
             ),
             // Tags
             if (node.multiplier != 1.0)
-              _Tag(
-                label: '${node.multiplier}x',
-                color: AppTheme.warningColor,
-              ),
-            ...node.tags.map((tag) => _Tag(
-                  label: _getTagLabel(tag),
-                  color: _getTagColor(tag),
-                )),
+              _Tag(label: '${node.multiplier}x', color: AppTheme.warningColor),
+            ...node.tags.map(
+              (tag) => _Tag(label: _getTagLabel(tag), color: _getTagColor(tag)),
+            ),
           ],
         ),
         subtitle: Text(
@@ -278,10 +271,7 @@ class _Tag extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _Tag({
-    required this.label,
-    required this.color,
-  });
+  const _Tag({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {

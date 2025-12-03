@@ -18,9 +18,5 @@ void main() async {
   // Initialize logger
   VortexLogger.init();
 
-  runApp(
-    const ProviderScope(
-      child: VortexApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: VortexApp()));
 }

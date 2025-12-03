@@ -7,9 +7,12 @@ import '../utils/logger.dart';
 /// 平台通道服务 - 用于与原生代码通信
 class PlatformChannelService {
   static const MethodChannel _channel = MethodChannel('com.vortex.app/core');
-  static const EventChannel _eventChannel = EventChannel('com.vortex.app/events');
+  static const EventChannel _eventChannel = EventChannel(
+    'com.vortex.app/events',
+  );
 
-  static final PlatformChannelService _instance = PlatformChannelService._internal();
+  static final PlatformChannelService _instance =
+      PlatformChannelService._internal();
   static PlatformChannelService get instance => _instance;
 
   PlatformChannelService._internal();

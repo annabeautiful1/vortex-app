@@ -42,7 +42,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> _checkStoredSession() async {
-    final token = await StorageService.instance.getSecure(AppConstants.tokenKey);
+    final token = await StorageService.instance.getSecure(
+      AppConstants.tokenKey,
+    );
     if (token != null) {
       state = state.copyWith(isLoading: true);
       try {
@@ -58,10 +60,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return await ApiManager.instance.getGuestConfig();
   }
 
-  Future<void> login({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> login({required String email, required String password}) async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
@@ -75,10 +74,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
             ? '/api/v1/passport/auth/login'
             : '/api/v1/user/login',
         method: 'POST',
-        data: {
-          'email': email,
-          'password': password,
-        },
+        data: {'email': email, 'password': password},
       );
 
       final data = response.data;
@@ -96,10 +92,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       VortexLogger.i('User logged in: $email');
     } catch (e) {
       VortexLogger.e('Login failed', e);
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
       rethrow;
     }
   }
@@ -117,10 +110,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         throw Exception(ErrorMessages.noValidApi);
       }
 
-      final requestData = {
-        'email': email,
-        'password': password,
-      };
+      final requestData = {'email': email, 'password': password};
 
       if (inviteCode != null && inviteCode.isNotEmpty) {
         requestData['invite_code'] = inviteCode;
@@ -139,10 +129,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       VortexLogger.i('User registered: $email');
     } catch (e) {
       VortexLogger.e('Registration failed', e);
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
       rethrow;
     }
   }
@@ -175,7 +162,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
               : DateTime.now(),
           trafficTotal: data['transfer_enable'] ?? 0,
           trafficUsed: (data['u'] ?? 0) + (data['d'] ?? 0),
-          trafficRemaining: (data['transfer_enable'] ?? 0) -
+          trafficRemaining:
+              (data['transfer_enable'] ?? 0) -
               ((data['u'] ?? 0) + (data['d'] ?? 0)),
           subscriptionUrl: data['subscribe_url'],
         ),
@@ -184,11 +172,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
             : null,
       );
 
-      state = AuthState(
-        isAuthenticated: true,
-        isLoading: false,
-        user: user,
-      );
+      state = AuthState(isAuthenticated: true, isLoading: false, user: user);
     } catch (e) {
       VortexLogger.e('Failed to fetch user info', e);
       rethrow;
@@ -202,7 +186,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> refreshUserInfo() async {
-    final token = await StorageService.instance.getSecure(AppConstants.tokenKey);
+    final token = await StorageService.instance.getSecure(
+      AppConstants.tokenKey,
+    );
     if (token != null) {
       await _fetchUserInfo(token);
     }

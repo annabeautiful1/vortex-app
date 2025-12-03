@@ -53,7 +53,9 @@ class User {
     email: json['email'] as String,
     username: json['username'] as String?,
     avatarUrl: json['avatarUrl'] as String?,
-    subscription: UserSubscription.fromJson(json['subscription'] as Map<String, dynamic>),
+    subscription: UserSubscription.fromJson(
+      json['subscription'] as Map<String, dynamic>,
+    ),
     createdAt: json['createdAt'] != null
         ? DateTime.parse(json['createdAt'] as String)
         : null,
@@ -123,19 +125,20 @@ class UserSubscription {
     'isLimited': isLimited,
   };
 
-  factory UserSubscription.fromJson(Map<String, dynamic> json) => UserSubscription(
-    planName: json['planName'] as String,
-    expireAt: DateTime.parse(json['expireAt'] as String),
-    trafficTotal: json['trafficTotal'] as int,
-    trafficUsed: json['trafficUsed'] as int,
-    trafficRemaining: json['trafficRemaining'] as int,
-    subscriptionUrl: json['subscriptionUrl'] as String?,
-    lastUpdated: json['lastUpdated'] != null
-        ? DateTime.parse(json['lastUpdated'] as String)
-        : null,
-    isExpired: json['isExpired'] as bool? ?? false,
-    isLimited: json['isLimited'] as bool? ?? false,
-  );
+  factory UserSubscription.fromJson(Map<String, dynamic> json) =>
+      UserSubscription(
+        planName: json['planName'] as String,
+        expireAt: DateTime.parse(json['expireAt'] as String),
+        trafficTotal: json['trafficTotal'] as int,
+        trafficUsed: json['trafficUsed'] as int,
+        trafficRemaining: json['trafficRemaining'] as int,
+        subscriptionUrl: json['subscriptionUrl'] as String?,
+        lastUpdated: json['lastUpdated'] != null
+            ? DateTime.parse(json['lastUpdated'] as String)
+            : null,
+        isExpired: json['isExpired'] as bool? ?? false,
+        isLimited: json['isLimited'] as bool? ?? false,
+      );
 }
 
 /// User session

@@ -55,9 +55,7 @@ class _SupportPageState extends ConsumerState<SupportPage> {
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 border: Border(
-                  bottom: BorderSide(
-                    color: Theme.of(context).dividerColor,
-                  ),
+                  bottom: BorderSide(color: Theme.of(context).dividerColor),
                 ),
               ),
               child: Row(
@@ -81,9 +79,8 @@ class _SupportPageState extends ConsumerState<SupportPage> {
                       children: [
                         Text(
                           '在线客服',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         Row(
                           children: [
@@ -138,9 +135,7 @@ class _SupportPageState extends ConsumerState<SupportPage> {
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 border: Border(
-                  top: BorderSide(
-                    color: Theme.of(context).dividerColor,
-                  ),
+                  top: BorderSide(color: Theme.of(context).dividerColor),
                 ),
               ),
               child: Row(
@@ -198,16 +193,16 @@ class _SupportPageState extends ConsumerState<SupportPage> {
           const SizedBox(height: 16),
           Text(
             '欢迎使用在线客服',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.grey.shade600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
             '有任何问题，请随时向我们咨询',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey.shade500,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade500),
           ),
         ],
       ),
@@ -227,7 +222,9 @@ class _MessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isMe) ...[
@@ -271,9 +268,7 @@ class _MessageBubble extends StatelessWidget {
                   if (message.text != null)
                     Text(
                       message.text!,
-                      style: TextStyle(
-                        color: isMe ? Colors.white : null,
-                      ),
+                      style: TextStyle(color: isMe ? Colors.white : null),
                     ),
                   const SizedBox(height: 4),
                   Text(

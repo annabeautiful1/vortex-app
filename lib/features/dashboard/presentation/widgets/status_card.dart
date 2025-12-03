@@ -26,17 +26,14 @@ class StatusCard extends ConsumerWidget {
                     color: AppTheme.primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    Icons.info_outline,
-                    color: AppTheme.primaryColor,
-                  ),
+                  child: Icon(Icons.info_outline, color: AppTheme.primaryColor),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   '连接状态',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -62,7 +59,9 @@ class StatusCard extends ConsumerWidget {
             const SizedBox(height: 12),
             _StatusRow(
               label: '协议',
-              value: connectionState.connectedNode?.protocol.name.toUpperCase() ?? '-',
+              value:
+                  connectionState.connectedNode?.protocol.name.toUpperCase() ??
+                  '-',
             ),
           ],
         ),
@@ -83,11 +82,7 @@ class _StatusRow extends StatelessWidget {
   final String value;
   final Color? valueColor;
 
-  const _StatusRow({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
+  const _StatusRow({required this.label, required this.value, this.valueColor});
 
   @override
   Widget build(BuildContext context) {
@@ -97,15 +92,15 @@ class _StatusRow extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         Text(
           value,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: valueColor,
-              ),
+            fontWeight: FontWeight.w600,
+            color: valueColor,
+          ),
         ),
       ],
     );

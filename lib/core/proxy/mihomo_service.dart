@@ -32,21 +32,21 @@ class MihomoService {
   String get apiBaseUrl => 'http://$_host:$_port';
 
   /// 初始化服务
-  Future<void> init({
-    String? host,
-    int? port,
-    String? secret,
-  }) async {
+  Future<void> init({String? host, int? port, String? secret}) async {
     _host = host ?? _defaultHost;
     _port = port ?? _defaultPort;
     _secret = secret ?? _defaultSecret;
 
-    _dio = Dio(BaseOptions(
-      baseUrl: apiBaseUrl,
-      connectTimeout: const Duration(seconds: 5),
-      receiveTimeout: const Duration(seconds: 10),
-      headers: _secret.isNotEmpty ? {'Authorization': 'Bearer $_secret'} : null,
-    ));
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: apiBaseUrl,
+        connectTimeout: const Duration(seconds: 5),
+        receiveTimeout: const Duration(seconds: 10),
+        headers: _secret.isNotEmpty
+            ? {'Authorization': 'Bearer $_secret'}
+            : null,
+      ),
+    );
 
     VortexLogger.i('MihomoService initialized: $apiBaseUrl');
   }
@@ -152,9 +152,7 @@ class MihomoService {
   /// 重载配置文件
   Future<bool> reloadConfig(String configPath) async {
     try {
-      await _dio.put('/configs', queryParameters: {
-        'path': configPath,
-      });
+      await _dio.put('/configs', queryParameters: {'path': configPath});
       VortexLogger.i('Config reloaded: $configPath');
       return true;
     } catch (e) {
@@ -201,14 +199,15 @@ class MihomoService {
   }
 
   /// 测试代理延迟
-  Future<int?> testProxyDelay(String name, {String url = 'http://www.gstatic.com/generate_204', int timeout = 5000}) async {
+  Future<int?> testProxyDelay(
+    String name, {
+    String url = 'http://www.gstatic.com/generate_204',
+    int timeout = 5000,
+  }) async {
     try {
       final response = await _dio.get(
         '/proxies/${Uri.encodeComponent(name)}/delay',
-        queryParameters: {
-          'url': url,
-          'timeout': timeout,
-        },
+        queryParameters: {'url': url, 'timeout': timeout},
       );
       return response.data['delay'] as int?;
     } catch (e) {
@@ -218,14 +217,15 @@ class MihomoService {
   }
 
   /// 批量测试延迟
-  Future<Map<String, int?>> testGroupDelay(String groupName, {String url = 'http://www.gstatic.com/generate_204', int timeout = 5000}) async {
+  Future<Map<String, int?>> testGroupDelay(
+    String groupName, {
+    String url = 'http://www.gstatic.com/generate_204',
+    int timeout = 5000,
+  }) async {
     try {
       final response = await _dio.get(
         '/group/${Uri.encodeComponent(groupName)}/delay',
-        queryParameters: {
-          'url': url,
-          'timeout': timeout,
-        },
+        queryParameters: {'url': url, 'timeout': timeout},
       );
       final data = response.data as Map<String, dynamic>;
       return data.map((key, value) => MapEntry(key, value as int?));
@@ -291,18 +291,21 @@ class MihomoService {
       );
 
       final stream = response.data.stream as Stream<List<int>>;
-      stream.transform(utf8.decoder).transform(const LineSplitter()).listen(
-        (line) {
-          if (line.isNotEmpty) {
-            try {
-              final data = jsonDecode(line) as Map<String, dynamic>;
-              controller.add(data);
-            } catch (_) {}
-          }
-        },
-        onError: controller.addError,
-        onDone: controller.close,
-      );
+      stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .listen(
+            (line) {
+              if (line.isNotEmpty) {
+                try {
+                  final data = jsonDecode(line) as Map<String, dynamic>;
+                  controller.add(data);
+                } catch (_) {}
+              }
+            },
+            onError: controller.addError,
+            onDone: controller.close,
+          );
     } catch (e) {
       controller.addError(e);
       controller.close();
@@ -312,7 +315,9 @@ class MihomoService {
   }
 
   /// 获取日志流
-  Future<Stream<Map<String, dynamic>>> getLogsStream({String level = 'info'}) async {
+  Future<Stream<Map<String, dynamic>>> getLogsStream({
+    String level = 'info',
+  }) async {
     final controller = StreamController<Map<String, dynamic>>();
 
     try {
@@ -323,18 +328,21 @@ class MihomoService {
       );
 
       final stream = response.data.stream as Stream<List<int>>;
-      stream.transform(utf8.decoder).transform(const LineSplitter()).listen(
-        (line) {
-          if (line.isNotEmpty) {
-            try {
-              final data = jsonDecode(line) as Map<String, dynamic>;
-              controller.add(data);
-            } catch (_) {}
-          }
-        },
-        onError: controller.addError,
-        onDone: controller.close,
-      );
+      stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .listen(
+            (line) {
+              if (line.isNotEmpty) {
+                try {
+                  final data = jsonDecode(line) as Map<String, dynamic>;
+                  controller.add(data);
+                } catch (_) {}
+              }
+            },
+            onError: controller.addError,
+            onDone: controller.close,
+          );
     } catch (e) {
       controller.addError(e);
       controller.close();
@@ -382,9 +390,7 @@ class MihomoService {
   Future<bool> setSystemProxy(bool enable) async {
     // 通过更新配置来控制 TUN
     return await updateConfig({
-      'tun': {
-        'enable': enable,
-      },
+      'tun': {'enable': enable},
     });
   }
 
@@ -409,26 +415,21 @@ class MihomoService {
         'enable': true,
         'enhanced-mode': 'fake-ip',
         'fake-ip-range': '198.18.0.1/16',
-        'nameserver': [
-          '223.5.5.5',
-          '119.29.29.29',
-        ],
+        'nameserver': ['223.5.5.5', '119.29.29.29'],
         'fallback': [
           'https://dns.google/dns-query',
           'https://cloudflare-dns.com/dns-query',
         ],
-        'fallback-filter': {
-          'geoip': true,
-          'geoip-code': 'CN',
+        'fallback-filter': {'geoip': true, 'geoip-code': 'CN'},
+      },
+      if (tunEnabled)
+        'tun': {
+          'enable': true,
+          'stack': 'system',
+          'auto-route': true,
+          'auto-detect-interface': true,
+          'dns-hijack': ['any:53'],
         },
-      },
-      if (tunEnabled) 'tun': {
-        'enable': true,
-        'stack': 'system',
-        'auto-route': true,
-        'auto-detect-interface': true,
-        'dns-hijack': ['any:53'],
-      },
       'proxies': nodes.map((n) => _nodeToProxy(n)).toList(),
       'proxy-groups': [
         {
@@ -444,11 +445,7 @@ class MihomoService {
           'interval': 300,
         },
       ],
-      'rules': [
-        'GEOIP,LAN,DIRECT',
-        'GEOIP,CN,DIRECT',
-        'MATCH,PROXY',
-      ],
+      'rules': ['GEOIP,LAN,DIRECT', 'GEOIP,CN,DIRECT', 'MATCH,PROXY'],
     };
 
     final configDir = await getConfigDirectory();

@@ -53,9 +53,7 @@ class SupportNotifier extends StateNotifier<SupportState> {
       timestamp: DateTime.now(),
     );
 
-    state = state.copyWith(
-      messages: [...state.messages, message],
-    );
+    state = state.copyWith(messages: [...state.messages, message]);
 
     VortexLogger.i('Sent message: $text');
   }
@@ -68,17 +66,13 @@ class SupportNotifier extends StateNotifier<SupportState> {
       timestamp: DateTime.now(),
     );
 
-    state = state.copyWith(
-      messages: [...state.messages, message],
-    );
+    state = state.copyWith(messages: [...state.messages, message]);
 
     VortexLogger.i('Sent image: $imagePath');
   }
 
   void receiveMessage(ChatMessage message) {
-    state = state.copyWith(
-      messages: [...state.messages, message],
-    );
+    state = state.copyWith(messages: [...state.messages, message]);
   }
 
   void setOnlineStatus(bool isOnline) {
@@ -90,6 +84,8 @@ class SupportNotifier extends StateNotifier<SupportState> {
   }
 }
 
-final supportProvider = StateNotifierProvider<SupportNotifier, SupportState>((ref) {
+final supportProvider = StateNotifierProvider<SupportNotifier, SupportState>((
+  ref,
+) {
   return SupportNotifier();
 });

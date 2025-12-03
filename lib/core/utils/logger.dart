@@ -27,7 +27,9 @@ class VortexLogger {
     if (!await logDir.exists()) {
       await logDir.create(recursive: true);
     }
-    _logFile = File('${logDir.path}/vortex_${DateTime.now().toIso8601String().split('T')[0]}.log');
+    _logFile = File(
+      '${logDir.path}/vortex_${DateTime.now().toIso8601String().split('T')[0]}.log',
+    );
   }
 
   static void d(String message, [dynamic error, StackTrace? stackTrace]) {
@@ -51,13 +53,15 @@ class VortexLogger {
   }
 
   static void api(String method, String url, {int? statusCode, dynamic body}) {
-    final msg = 'API [$method] $url ${statusCode != null ? "-> $statusCode" : ""}';
+    final msg =
+        'API [$method] $url ${statusCode != null ? "-> $statusCode" : ""}';
     _logger.i(msg);
     _writeToFile('API', '$msg\n$body');
   }
 
   static void subscription(String action, String url, {String? error}) {
-    final msg = 'SUBSCRIPTION [$action] $url ${error != null ? "Error: $error" : ""}';
+    final msg =
+        'SUBSCRIPTION [$action] $url ${error != null ? "Error: $error" : ""}';
     if (error != null) {
       _logger.e(msg);
     } else {
@@ -66,7 +70,12 @@ class VortexLogger {
     _writeToFile('SUB', msg);
   }
 
-  static void _writeToFile(String level, String message, [dynamic error, StackTrace? stackTrace]) {
+  static void _writeToFile(
+    String level,
+    String message, [
+    dynamic error,
+    StackTrace? stackTrace,
+  ]) {
     if (_logFile == null) return;
     final timestamp = DateTime.now().toIso8601String();
     var logEntry = '[$timestamp] [$level] $message\n';

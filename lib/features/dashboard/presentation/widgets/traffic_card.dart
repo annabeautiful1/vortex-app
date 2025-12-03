@@ -26,17 +26,14 @@ class TrafficCard extends ConsumerWidget {
                     color: AppTheme.accentColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    Icons.data_usage,
-                    color: AppTheme.accentColor,
-                  ),
+                  child: Icon(Icons.data_usage, color: AppTheme.accentColor),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   '流量使用',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -77,10 +74,7 @@ class TrafficCard extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 20),
-              _InfoRow(
-                label: '套餐',
-                value: subscription.planName,
-              ),
+              _InfoRow(label: '套餐', value: subscription.planName),
               const SizedBox(height: 12),
               _InfoRow(
                 label: '到期',
@@ -95,9 +89,7 @@ class TrafficCard extends ConsumerWidget {
                 value: _formatBytes(subscription.trafficRemaining),
               ),
             ] else ...[
-              const Center(
-                child: Text('暂无套餐信息'),
-              ),
+              const Center(child: Text('暂无套餐信息')),
             ],
           ],
         ),
@@ -132,11 +124,7 @@ class _InfoRow extends StatelessWidget {
   final String value;
   final Color? valueColor;
 
-  const _InfoRow({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
+  const _InfoRow({required this.label, required this.value, this.valueColor});
 
   @override
   Widget build(BuildContext context) {
@@ -146,15 +134,15 @@ class _InfoRow extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         Text(
           value,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: valueColor,
-              ),
+            fontWeight: FontWeight.w600,
+            color: valueColor,
+          ),
         ),
       ],
     );
