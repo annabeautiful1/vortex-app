@@ -1,16 +1,179 @@
-# vortex_app
+# Vortex 漩涡客户端
 
-A new Flutter project.
+<p align="center">
+  现代化跨平台VPN客户端
+</p>
 
-## Getting Started
+<p align="center">
+  <a href="#功能特点">功能特点</a> •
+  <a href="#支持平台">支持平台</a> •
+  <a href="#支持协议">支持协议</a> •
+  <a href="#开发">开发</a> •
+  <a href="#常见问题">常见问题</a>
+</p>
 
-This project is a starting point for a Flutter application.
+---
 
-A few resources to get you started if this is your first Flutter project:
+## 功能特点
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- 🚀 **一键登录、一键连接** - 简化操作流程，支持注册
+- 🌐 **全平台TUN模式** - 代理全部流量
+- 🔄 **内建代理** - 用于API通信，解决阻断、反诈、直连不畅等问题
+- 🛡️ **多OSS/API支持** - 自动轮询，永不被墙
+- 📡 **全协议支持** - 支持所有主流协议
+- 🎯 **策略组分流** - 灵活的流量分流规则
+- 📊 **简化Dashboard** - 小白也能看懂的信息面板
+- 🎨 **自定义主题** - 可自定义主题色彩、Logo、名称、欢迎图
+- 💰 **完善内购系统** - 带续费引导，支持多种支付方式
+- 💬 **独家客服系统** - 支持多席位，Telegram消息处理
+- ⚡ **优化延迟算法** - 真实反映用户端到落地的TCP延迟
+- 📢 **公告支持** - 节点倍率标签，自定义标签
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 支持平台
+
+| 平台 | 状态 | 最低版本 |
+|------|------|----------|
+| Android | ✅ | Android 5.0+ |
+| iOS | ✅ | iOS 12.0+ |
+| macOS | ✅ | macOS 10.14+ |
+| Windows | ✅ | Windows 10+ |
+
+## 支持协议
+
+- **Shadowsocks** (SS-2022、SMUX、插件支持obfs/v2ray-plugin/shadow-tls/restls)
+- **ShadowsocksR**
+- **VMess**
+- **VLESS** (WS-TLS、TCP-TLS、reality-grpc、reality-vision、xtls-rprx-vision)
+- **Trojan**
+- **Hysteria / Hysteria2**
+- **TUIC**
+- **WireGuard**
+- **AnyTLS**
+
+## 支持面板
+
+### SSPanel
+- 需要部署 `guest_config` 接口
+- 在 `/public` 添加 `guest_config.txt`:
+```json
+{
+    "is_email_verify": true,
+    "is_invite_force": false,
+    "email_whitelist_suffix": ["gmail.com", "outlook.com"],
+    "app_description": "欢迎使用"
+}
+```
+
+### V2board
+- 支持版本 1.7.1 - 1.7.4
+- 订阅类型:
+  - `clashmeta` - V2board 1.7.1-1.7.3
+  - `meta` - V2board 1.7.4
+
+## 开发
+
+### 环境要求
+
+- Flutter 3.38.3+
+- Dart 3.10.1+
+- Android Studio / Xcode (按需)
+
+### 快速开始
+
+```bash
+# 克隆项目
+git clone https://github.com/annabeautiful1/vortex-app.git
+
+# 安装依赖
+flutter pub get
+
+# 运行代码生成
+flutter pub run build_runner build
+
+# 运行应用
+flutter run
+```
+
+### 构建发布版本
+
+```bash
+# Android APK
+flutter build apk --release
+
+# Android App Bundle
+flutter build appbundle --release
+
+# iOS
+flutter build ios --release
+
+# macOS
+flutter build macos --release
+
+# Windows
+flutter build windows --release
+```
+
+## 日志查看
+
+客户端日志路径：
+
+| 平台 | 路径 |
+|------|------|
+| Windows | `C:\Users\<用户名>\.config\com.vortex.helper` |
+| macOS | `/Users/<用户名>/.config/com.vortex.helper` |
+| Android (无法登录) | 长按登录界面Logo两秒，日志复制到剪贴板 |
+| Android (已登录) | 关于页面 → 导出日志 |
+
+## 常见问题
+
+### 1. 登录时提示"查询有效后端"
+表明无可用API或API全部测活失败。
+- 检查日志排查问题
+- 验证API地址测活是否正常
+  - V2board: `http(s)://API地址/api/v1/guest/comm/config`
+  - SSPanel: `http(s)://API地址/guest_config.txt`
+
+### 2. 订阅无法正常拉取
+- 检查订阅链接的国内连接性
+- 检查是否有不支持的字段（如GEOSITE）
+- 配置文件过大时使用 `rule-provider` 规则集
+
+### 3. 无法上网
+- 检查系统代理是否已恢复
+- 重新打开Vortex会自动修复系统代理
+- 建议勾选"开机启动"
+
+### 4. 提示"请等待"或简介未加载
+核心可能未启动：
+- **macOS**: 其他软件(surge/clashx)后台占用，卸载后重启
+- **Windows**: 杀毒软件干扰，关闭后重新安装
+- 注意区分Intel和M芯片的macOS版本
+
+## 项目结构
+
+```
+lib/
+├── core/                 # 核心模块
+│   ├── api/             # API管理
+│   ├── protocols/       # 协议支持
+│   ├── proxy/           # 代理核心
+│   └── utils/           # 工具类
+├── features/            # 功能模块
+│   ├── auth/           # 认证
+│   ├── dashboard/      # 仪表盘
+│   ├── nodes/          # 节点管理
+│   ├── settings/       # 设置
+│   └── support/        # 客服支持
+├── shared/              # 共享模块
+│   ├── constants/      # 常量
+│   ├── models/         # 数据模型
+│   ├── services/       # 服务
+│   ├── themes/         # 主题
+│   └── widgets/        # 组件
+├── app.dart            # 应用入口
+└── main.dart           # 主函数
+```
+
+## License
+
+Private - All Rights Reserved

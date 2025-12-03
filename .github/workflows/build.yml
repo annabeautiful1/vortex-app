@@ -1,0 +1,245 @@
+# Vortex App - Multi-Platform Build Workflow
+name: Build All Platforms
+
+on:
+  push:
+    branches: [ master, main, develop ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+    inputs:
+      build_android:
+        description: 'Build Android'
+        required: false
+        default: true
+        type: boolean
+      build_ios:
+        description: 'Build iOS'
+        required: false
+        default: true
+        type: boolean
+      build_macos:
+        description: 'Build macOS'
+        required: false
+        default: true
+        type: boolean
+      build_windows:
+        description: 'Build Windows'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  FLUTTER_VERSION: '3.38.3'
+  JAVA_VERSION: '17'
+
+jobs:
+  # Analyze code first
+  analyze:
+    name: Analyze Code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Analyze code
+        run: flutter analyze --no-fatal-infos
+
+      - name: Check formatting
+        run: dart format --set-exit-if-changed lib/
+
+  # Build Android
+  build-android:
+    name: Build Android
+    needs: analyze
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.build_android != 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Build App Bundle
+        run: flutter build appbundle --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+
+  # Build iOS
+  build-ios:
+    name: Build iOS
+    needs: analyze
+    runs-on: macos-latest
+    if: ${{ github.event.inputs.build_ios != 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build iOS (no codesign)
+        run: flutter build ios --release --no-codesign
+
+      - name: Create IPA directory
+        run: mkdir -p build/ios/ipa
+
+      - name: Create unsigned IPA
+        run: |
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r ../ipa/vortex-unsigned.ipa Payload
+
+      - name: Upload iOS Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: build/ios/ipa/vortex-unsigned.ipa
+
+  # Build macOS
+  build-macos:
+    name: Build macOS
+    needs: analyze
+    runs-on: macos-latest
+    if: ${{ github.event.inputs.build_macos != 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Enable macOS desktop
+        run: flutter config --enable-macos-desktop
+
+      - name: Build macOS
+        run: flutter build macos --release
+
+      - name: Create DMG
+        run: |
+          cd build/macos/Build/Products/Release
+          mkdir -p dmg
+          cp -r "vortex_app.app" dmg/
+          hdiutil create -volname "Vortex" -srcfolder dmg -ov -format UDZO "Vortex-macOS.dmg"
+
+      - name: Upload macOS Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: build/macos/Build/Products/Release/Vortex-macOS.dmg
+
+  # Build Windows
+  build-windows:
+    name: Build Windows
+    needs: analyze
+    runs-on: windows-latest
+    if: ${{ github.event.inputs.build_windows != 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Create ZIP
+        run: |
+          cd build/windows/x64/runner/Release
+          Compress-Archive -Path * -DestinationPath Vortex-Windows.zip
+
+      - name: Upload Windows Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: build/windows/x64/runner/Release/Vortex-Windows.zip
+
+  # Create Release (only on tags)
+  release:
+    name: Create Release
+    needs: [build-android, build-ios, build-macos, build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: ls -R artifacts/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/android-apk/app-release.apk
+            artifacts/android-aab/app-release.aab
+            artifacts/ios-build/vortex-unsigned.ipa
+            artifacts/macos-build/Vortex-macOS.dmg
+            artifacts/windows-build/Vortex-Windows.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true
