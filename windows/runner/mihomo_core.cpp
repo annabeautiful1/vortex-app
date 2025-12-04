@@ -372,7 +372,7 @@ std::string MihomoCore::HttpGet(const std::string& path) {
         if (!controllerSecret_.empty()) {
             std::wstring authHeader = L"Authorization: Bearer " +
                 std::wstring(controllerSecret_.begin(), controllerSecret_.end());
-            WinHttpAddRequestHeaders(hRequest, authHeader.c_str(), -1,
+            WinHttpAddRequestHeaders(hRequest, authHeader.c_str(), static_cast<DWORD>(-1),
                 WINHTTP_ADDREQ_FLAG_ADD);
         }
 
@@ -437,10 +437,10 @@ std::string MihomoCore::HttpPut(const std::string& path, const std::string& body
             headers += L"Authorization: Bearer " +
                 std::wstring(controllerSecret_.begin(), controllerSecret_.end()) + L"\r\n";
         }
-        WinHttpAddRequestHeaders(hRequest, headers.c_str(), -1, WINHTTP_ADDREQ_FLAG_ADD);
+        WinHttpAddRequestHeaders(hRequest, headers.c_str(), static_cast<DWORD>(-1), WINHTTP_ADDREQ_FLAG_ADD);
 
         if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-            (LPVOID)body.c_str(), body.length(), body.length(), 0)) {
+            (LPVOID)body.c_str(), static_cast<DWORD>(body.length()), static_cast<DWORD>(body.length()), 0)) {
             throw std::runtime_error("WinHttpSendRequest failed");
         }
 

@@ -47,10 +47,10 @@ void PlatformChannel::Register(flutter::FlutterEngine* engine) {
 
             core.SetTrafficCallback([](const MihomoCore::TrafficStats& stats) {
                 flutter::EncodableMap data;
-                data[flutter::EncodableValue("upload")] = flutter::EncodableValue(stats.upload);
-                data[flutter::EncodableValue("download")] = flutter::EncodableValue(stats.download);
-                data[flutter::EncodableValue("uploadSpeed")] = flutter::EncodableValue(stats.uploadSpeed);
-                data[flutter::EncodableValue("downloadSpeed")] = flutter::EncodableValue(stats.downloadSpeed);
+                data[flutter::EncodableValue("upload")] = flutter::EncodableValue(static_cast<int64_t>(stats.upload));
+                data[flutter::EncodableValue("download")] = flutter::EncodableValue(static_cast<int64_t>(stats.download));
+                data[flutter::EncodableValue("uploadSpeed")] = flutter::EncodableValue(static_cast<int64_t>(stats.uploadSpeed));
+                data[flutter::EncodableValue("downloadSpeed")] = flutter::EncodableValue(static_cast<int64_t>(stats.downloadSpeed));
                 SendEvent("traffic_update", flutter::EncodableValue(data));
             });
 
@@ -162,10 +162,10 @@ void PlatformChannel::HandleMethodCall(
     } else if (method == "getTrafficStats") {
         auto stats = core.GetTrafficStats();
         flutter::EncodableMap data;
-        data[flutter::EncodableValue("upload")] = flutter::EncodableValue(stats.upload);
-        data[flutter::EncodableValue("download")] = flutter::EncodableValue(stats.download);
-        data[flutter::EncodableValue("uploadSpeed")] = flutter::EncodableValue(stats.uploadSpeed);
-        data[flutter::EncodableValue("downloadSpeed")] = flutter::EncodableValue(stats.downloadSpeed);
+        data[flutter::EncodableValue("upload")] = flutter::EncodableValue(static_cast<int64_t>(stats.upload));
+        data[flutter::EncodableValue("download")] = flutter::EncodableValue(static_cast<int64_t>(stats.download));
+        data[flutter::EncodableValue("uploadSpeed")] = flutter::EncodableValue(static_cast<int64_t>(stats.uploadSpeed));
+        data[flutter::EncodableValue("downloadSpeed")] = flutter::EncodableValue(static_cast<int64_t>(stats.downloadSpeed));
         result->Success(flutter::EncodableValue(data));
 
     } else if (method == "testProxyDelay") {
@@ -300,7 +300,7 @@ bool PlatformChannel::SetSystemProxy(bool enable, const std::string& host, int p
         std::string proxyServer = host + ":" + std::to_string(port);
         std::wstring wProxyServer(proxyServer.begin(), proxyServer.end());
         RegSetValueExW(hKey, L"ProxyServer", 0, REG_SZ,
-            (BYTE*)wProxyServer.c_str(), (wProxyServer.size() + 1) * sizeof(wchar_t));
+            (BYTE*)wProxyServer.c_str(), static_cast<DWORD>((wProxyServer.size() + 1) * sizeof(wchar_t)));
     }
 
     RegCloseKey(hKey);
@@ -326,7 +326,7 @@ bool PlatformChannel::SetAutoStart(bool enable) {
     if (enable) {
         wchar_t path[MAX_PATH];
         GetModuleFileNameW(nullptr, path, MAX_PATH);
-        RegSetValueExW(hKey, L"Vortex", 0, REG_SZ, (BYTE*)path, (wcslen(path) + 1) * sizeof(wchar_t));
+        RegSetValueExW(hKey, L"Vortex", 0, REG_SZ, (BYTE*)path, static_cast<DWORD>((wcslen(path) + 1) * sizeof(wchar_t)));
     } else {
         RegDeleteValueW(hKey, L"Vortex");
     }
