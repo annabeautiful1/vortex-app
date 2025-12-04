@@ -8,6 +8,13 @@ import UIKit
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+
+    // Register platform channel
+    if let controller = window?.rootViewController as? FlutterViewController {
+        let registrar = controller.registrar(forPlugin: "PlatformChannel")!
+        PlatformChannel.shared.register(with: registrar)
+    }
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

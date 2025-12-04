@@ -42,3 +42,12 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Kotlin Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+
+    // OkHttp for REST API calls
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+}

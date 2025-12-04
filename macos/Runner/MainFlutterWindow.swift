@@ -10,6 +10,10 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 
+    // Register platform channel
+    let registrar = flutterViewController.registrar(forPlugin: "PlatformChannel")
+    PlatformChannel.shared.register(with: registrar)
+
     super.awakeFromNib()
   }
 }
