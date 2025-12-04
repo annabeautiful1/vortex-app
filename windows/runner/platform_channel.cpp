@@ -4,12 +4,14 @@
 
 #include <shlobj.h>
 #include <shlwapi.h>
+#include <wininet.h>
 #include <iostream>
 #include <fstream>
 #include <filesystem>
 
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "shlwapi.lib")
+#pragma comment(lib, "wininet.lib")
 
 std::unique_ptr<flutter::EventSink<flutter::EncodableValue>> PlatformChannel::event_sink_;
 

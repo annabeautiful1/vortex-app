@@ -360,7 +360,7 @@ std::string MihomoCore::HttpGet(const std::string& path) {
         if (!hSession) throw std::runtime_error("WinHttpOpen failed");
 
         std::wstring wHost(controllerHost_.begin(), controllerHost_.end());
-        hConnect = WinHttpConnect(hSession, wHost.c_str(), controllerPort_, 0);
+        hConnect = WinHttpConnect(hSession, wHost.c_str(), static_cast<INTERNET_PORT>(controllerPort_), 0);
         if (!hConnect) throw std::runtime_error("WinHttpConnect failed");
 
         std::wstring wPath(path.begin(), path.end());
@@ -423,7 +423,7 @@ std::string MihomoCore::HttpPut(const std::string& path, const std::string& body
         if (!hSession) throw std::runtime_error("WinHttpOpen failed");
 
         std::wstring wHost(controllerHost_.begin(), controllerHost_.end());
-        hConnect = WinHttpConnect(hSession, wHost.c_str(), controllerPort_, 0);
+        hConnect = WinHttpConnect(hSession, wHost.c_str(), static_cast<INTERNET_PORT>(controllerPort_), 0);
         if (!hConnect) throw std::runtime_error("WinHttpConnect failed");
 
         std::wstring wPath(path.begin(), path.end());
