@@ -415,6 +415,27 @@ class SSPanel2FARequiredException implements Exception {
   String toString() => message;
 }
 
+// ==================== Helper Functions ====================
+
+/// 安全解析 int，支持字符串格式
+int? _safeParseInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is String) return int.tryParse(value);
+  if (value is num) return value.toInt();
+  return null;
+}
+
+/// 安全解析 double，支持字符串格式
+double? _safeParseDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  if (value is num) return value.toDouble();
+  return null;
+}
+
 // ==================== Data Models ====================
 
 /// Guest configuration
@@ -565,26 +586,26 @@ class SSPanelUser {
 
   factory SSPanelUser.fromJson(Map<String, dynamic> json) {
     return SSPanelUser(
-      id: json['id'] as int? ?? 0,
-      email: json['email'] as String? ?? '',
-      userName: json['user_name'] as String?,
-      port: json['port'] as int?,
-      passwd: json['passwd'] as String?,
-      t: json['t'] as int?,
-      u: json['u'] as int? ?? 0,
-      d: json['d'] as int? ?? 0,
-      transferEnable: json['transfer_enable'] as int? ?? 0,
-      enable: json['enable'] as int? ?? 1,
-      nodeSpeedlimit: json['node_speedlimit'] as int? ?? 0,
-      nodeConnector: json['node_connector'] as int?,
-      money: (json['money'] as num?)?.toDouble() ?? 0,
-      imMoney: (json['im_money'] as num?)?.toDouble() ?? 0,
-      class_: json['class'] as int? ?? 0,
-      classExpire: json['class_expire'] as String? ?? '',
-      expireIn: json['expire_in'] as int?,
-      nodeGroup: json['node_group'] as int?,
-      onlineIpCount: json['online_ip_count'] as int? ?? 0,
-      telegramId: json['telegram_id'] as int?,
+      id: _safeParseInt(json['id']) ?? 0,
+      email: json['email']?.toString() ?? '',
+      userName: json['user_name']?.toString(),
+      port: _safeParseInt(json['port']),
+      passwd: json['passwd']?.toString(),
+      t: _safeParseInt(json['t']),
+      u: _safeParseInt(json['u']) ?? 0,
+      d: _safeParseInt(json['d']) ?? 0,
+      transferEnable: _safeParseInt(json['transfer_enable']) ?? 0,
+      enable: _safeParseInt(json['enable']) ?? 1,
+      nodeSpeedlimit: _safeParseInt(json['node_speedlimit']) ?? 0,
+      nodeConnector: _safeParseInt(json['node_connector']),
+      money: _safeParseDouble(json['money']) ?? 0,
+      imMoney: _safeParseDouble(json['im_money']) ?? 0,
+      class_: _safeParseInt(json['class']) ?? 0,
+      classExpire: json['class_expire']?.toString() ?? '',
+      expireIn: _safeParseInt(json['expire_in']),
+      nodeGroup: _safeParseInt(json['node_group']),
+      onlineIpCount: _safeParseInt(json['online_ip_count']) ?? 0,
+      telegramId: _safeParseInt(json['telegram_id']),
     );
   }
 
@@ -707,10 +728,10 @@ class SSPanelNotice {
 
   factory SSPanelNotice.fromJson(Map<String, dynamic> json) {
     return SSPanelNotice(
-      id: json['id'] as int? ?? 0,
-      title: json['title'] as String? ?? '',
-      content: json['content'] as String? ?? '',
-      date: json['date'] as String? ?? '',
+      id: _safeParseInt(json['id']) ?? 0,
+      title: json['title']?.toString() ?? '',
+      content: json['content']?.toString() ?? '',
+      date: json['date']?.toString() ?? '',
     );
   }
 }
@@ -741,15 +762,15 @@ class SSPanelShop {
 
   factory SSPanelShop.fromJson(Map<String, dynamic> json) {
     return SSPanelShop(
-      id: json['id'] as int? ?? 0,
-      name: json['name'] as String? ?? '',
-      price: (json['price'] as num?)?.toDouble() ?? 0,
-      autoRenew: json['auto_renew'] as int?,
-      autoResetDay: json['auto_reset_day'] as int?,
-      content: json['content'] as int?,
-      class_: json['class'] as int?,
-      classExpire: json['class_expire'] as int?,
-      status: json['status'] as int? ?? 1,
+      id: _safeParseInt(json['id']) ?? 0,
+      name: json['name']?.toString() ?? '',
+      price: _safeParseDouble(json['price']) ?? 0,
+      autoRenew: _safeParseInt(json['auto_renew']),
+      autoResetDay: _safeParseInt(json['auto_reset_day']),
+      content: _safeParseInt(json['content']),
+      class_: _safeParseInt(json['class']),
+      classExpire: _safeParseInt(json['class_expire']),
+      status: _safeParseInt(json['status']) ?? 1,
     );
   }
 
@@ -777,11 +798,11 @@ class SSPanelInviteInfo {
   factory SSPanelInviteInfo.fromJson(Map<String, dynamic> json) {
     return SSPanelInviteInfo(
       code: json['code'] is Map
-          ? (json['code'] as Map)['code'] as String?
+          ? (json['code'] as Map)['code']?.toString()
           : null,
-      codePayback: (json['code_payback'] as num?)?.toDouble() ?? 0,
-      inviteNum: json['invite_num'] as int? ?? 0,
-      paybacksSum: (json['paybacks_sum'] as num?)?.toDouble() ?? 0,
+      codePayback: _safeParseDouble(json['code_payback']) ?? 0,
+      inviteNum: _safeParseInt(json['invite_num']) ?? 0,
+      paybacksSum: _safeParseDouble(json['paybacks_sum']) ?? 0,
     );
   }
 }
@@ -817,10 +838,10 @@ class SSPanelPurchase {
 
   factory SSPanelPurchase.fromJson(Map<String, dynamic> json) {
     return SSPanelPurchase(
-      id: json['id'] as int? ?? 0,
-      name: json['name'] as String? ?? '',
-      content: json['content'] as String?,
-      datetime: json['datetime'] as String? ?? '',
+      id: _safeParseInt(json['id']) ?? 0,
+      name: json['name']?.toString() ?? '',
+      content: json['content']?.toString(),
+      datetime: json['datetime']?.toString() ?? '',
     );
   }
 }
