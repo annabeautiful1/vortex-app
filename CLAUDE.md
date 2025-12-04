@@ -2,6 +2,105 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+---
+
+## 📋 开发进度追踪
+
+### ✅ 已完成功能
+
+#### 阶段一：项目基础架构
+- [x] Flutter 跨平台项目创建（iOS/Android/macOS/Windows）
+- [x] GitHub 仓库配置和 CI/CD 工作流
+- [x] 基础目录结构和代码规范
+- [x] Riverpod 状态管理架构
+- [x] GoRouter 导航系统
+- [x] 主题系统（亮色/暗色）
+
+#### 阶段二：核心服务层
+- [x] `PlatformChannelService` - Flutter ↔ 原生通信
+- [x] `MihomoService` - Clash.Meta REST API 客户端
+- [x] `VpnService` - VPN 连接生命周期管理
+- [x] `ApiManager` - 多 API 轮询和故障转移
+- [x] `StorageService` - 本地存储（Hive + SecureStorage）
+- [x] `SubscriptionParser` - 订阅解析器
+
+#### 阶段三：平台原生代码
+- [x] Windows: Platform Channel + 系统代理设置
+- [x] macOS: Platform Channel 基础实现
+- [x] iOS: Platform Channel 基础实现
+- [x] Android: Platform Channel 基础实现
+
+#### 阶段四：UI 界面
+- [x] Dashboard 页面布局
+- [x] 连接按钮（动画效果）
+- [x] 状态卡片（连接状态/延迟/协议）
+- [x] 实时流量卡片（上传/下载速度）
+- [x] 套餐流量卡片（已用/总量）
+- [x] 节点列表页面框架
+- [x] 设置页面框架
+- [x] 登录页面框架
+
+#### 阶段五：VPN 连接管理
+- [x] `ConnectionProvider` 状态管理
+- [x] 连接/断开/切换节点逻辑
+- [x] 流量统计 StreamProvider
+- [x] Mihomo 配置文件生成
+
+---
+
+### 🚧 待完成功能
+
+#### 高优先级（核心功能）
+- [ ] **Mihomo 核心集成** - 嵌入 mihomo 二进制文件
+  - [ ] Windows: mihomo.exe 打包和启动
+  - [ ] macOS: mihomo 二进制打包
+  - [ ] iOS: Network Extension 实现
+  - [ ] Android: VpnService 实现
+- [ ] **用户认证系统**
+  - [ ] SSPanel 登录/注册 API 对接
+  - [ ] V2board 登录/注册 API 对接
+  - [ ] Token 存储和自动刷新
+- [ ] **订阅拉取和解析**
+  - [ ] 从面板获取订阅链接
+  - [ ] 解析 Clash/ClashMeta 格式
+  - [ ] 节点列表更新
+
+#### 中优先级（用户体验）
+- [ ] **节点管理**
+  - [ ] 节点列表展示（分组/标签）
+  - [ ] 节点延迟测试
+  - [ ] 节点排序和筛选
+  - [ ] 倍率标签显示
+- [ ] **TUN 模式**
+  - [ ] 各平台 TUN 实现
+  - [ ] 权限请求处理
+- [ ] **设置功能**
+  - [ ] 开机自启动
+  - [ ] 自动连接
+  - [ ] 代理模式切换
+  - [ ] 日志导出
+
+#### 低优先级（增值功能）
+- [ ] **公告系统** - 从面板获取公告
+- [ ] **客服系统** - Telegram 消息对接
+- [ ] **内购系统** - 续费引导
+- [ ] **自定义主题** - Logo/名称/颜色
+- [ ] **多语言支持**
+
+---
+
+### 🎯 下一步建议
+
+**推荐下一步：Mihomo 核心集成（Windows 优先）**
+
+因为 Windows 最容易调试，建议先完成：
+1. 下载 mihomo Windows 二进制
+2. 实现核心启动/停止逻辑
+3. 测试基本代理功能
+4. 验证系统代理设置生效
+
+---
+
 ## Project Overview
 
 Vortex (漩涡) is a cross-platform VPN client built with Flutter, supporting iOS, Android, macOS, and Windows. It uses Mihomo (Clash.Meta) as the proxy core and supports SSPanel and V2board panels.
