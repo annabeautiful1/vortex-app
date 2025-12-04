@@ -23,7 +23,7 @@ private:
     static bool SetSystemProxy(bool enable, const std::string& host, int port);
     static bool SetAutoStart(bool enable);
     static bool IsAutoStartEnabled();
-    static std::map<std::string, flutter::EncodableValue> GetDeviceInfo();
+    static flutter::EncodableMap GetDeviceInfo();
     static std::string GetConfigDirectory();
 
     static std::unique_ptr<flutter::EventSink<flutter::EncodableValue>> event_sink_;

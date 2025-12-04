@@ -354,8 +354,8 @@ bool PlatformChannel::IsAutoStartEnabled() {
     return result == ERROR_SUCCESS;
 }
 
-std::map<std::string, flutter::EncodableValue> PlatformChannel::GetDeviceInfo() {
-    std::map<std::string, flutter::EncodableValue> info;
+flutter::EncodableMap PlatformChannel::GetDeviceInfo() {
+    flutter::EncodableMap info;
 
     // Windows version
     OSVERSIONINFOEXW osvi = {0};
@@ -374,7 +374,7 @@ std::map<std::string, flutter::EncodableValue> PlatformChannel::GetDeviceInfo() 
     std::string version = std::to_string(osvi.dwMajorVersion) + "." +
                           std::to_string(osvi.dwMinorVersion) + "." +
                           std::to_string(osvi.dwBuildNumber);
-    info["version"] = flutter::EncodableValue(version);
+    info[flutter::EncodableValue("version")] = flutter::EncodableValue(version);
 
     // Computer name
     wchar_t computerName[MAX_COMPUTERNAME_LENGTH + 1];
@@ -382,11 +382,11 @@ std::map<std::string, flutter::EncodableValue> PlatformChannel::GetDeviceInfo() 
     if (GetComputerNameW(computerName, &size)) {
         std::wstring wName(computerName);
         std::string name(wName.begin(), wName.end());
-        info["model"] = flutter::EncodableValue(name);
+        info[flutter::EncodableValue("model")] = flutter::EncodableValue(name);
     }
 
-    info["manufacturer"] = flutter::EncodableValue("Microsoft");
-    info["platform"] = flutter::EncodableValue("windows");
+    info[flutter::EncodableValue("manufacturer")] = flutter::EncodableValue(std::string("Microsoft"));
+    info[flutter::EncodableValue("platform")] = flutter::EncodableValue(std::string("windows"));
 
     // Architecture
     SYSTEM_INFO si;
@@ -405,7 +405,7 @@ std::map<std::string, flutter::EncodableValue> PlatformChannel::GetDeviceInfo() 
         default:
             arch = "unknown";
     }
-    info["abi"] = flutter::EncodableValue(arch);
+    info[flutter::EncodableValue("abi")] = flutter::EncodableValue(arch);
 
     return info;
 }
