@@ -39,7 +39,13 @@ add_definitions(-DUNICODE -D_UNICODE)
 # of modifying this function.
 function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_features(${TARGET} PUBLIC cxx_std_17)
-  target_compile_options(${TARGET} PRIVATE /W4 /WX /wd"4100")
+  target_compile_options(${TARGET} PRIVATE /W4 /WX)
+  # Disable specific warnings:
+  # C4100: unreferenced formal parameter
+  # C4244: conversion from 'type1' to 'type2', possible loss of data
+  # C4267: conversion from 'size_t' to 'type', possible loss of data
+  # C4245: signed/unsigned mismatch
+  target_compile_options(${TARGET} PRIVATE /wd"4100" /wd"4244" /wd"4267" /wd"4245")
   target_compile_options(${TARGET} PRIVATE /EHsc)
   target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
   target_compile_definitions(${TARGET} PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
