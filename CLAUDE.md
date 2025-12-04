@@ -51,19 +51,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 🚧 待完成功能
 
 #### 高优先级（核心功能）
-- [ ] **Mihomo 核心集成** - 嵌入 mihomo 二进制文件
-  - [ ] Windows: mihomo.exe 打包和启动
+- [x] **Mihomo 核心集成** - 嵌入 mihomo 二进制文件
+  - [x] Windows: mihomo.exe 打包和启动 (v1.19.17)
   - [ ] macOS: mihomo 二进制打包
   - [ ] iOS: Network Extension 实现
   - [ ] Android: VpnService 实现
-- [ ] **用户认证系统**
-  - [ ] SSPanel 登录/注册 API 对接
-  - [ ] V2board 登录/注册 API 对接
-  - [ ] Token 存储和自动刷新
-- [ ] **订阅拉取和解析**
-  - [ ] 从面板获取订阅链接
-  - [ ] 解析 Clash/ClashMeta 格式
-  - [ ] 节点列表更新
+- [x] **用户认证系统**
+  - [x] SSPanel 登录/注册 API 对接
+  - [x] V2board 登录/注册 API 对接
+  - [x] Token 存储和自动刷新
+  - [x] 自动登录功能（启动时检查保存的会话）
+- [x] **订阅拉取和解析**
+  - [x] 从面板获取订阅链接
+  - [x] 解析 Clash/ClashMeta 格式
+  - [x] 节点列表更新
+  - [x] 登录成功后自动获取节点列表
 
 #### 中优先级（用户体验）
 - [ ] **节点管理**
@@ -91,13 +93,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### 🎯 下一步建议
 
-**推荐下一步：Mihomo 核心集成（Windows 优先）**
+**推荐下一步：其他平台 Mihomo 核心集成**
 
-因为 Windows 最容易调试，建议先完成：
-1. 下载 mihomo Windows 二进制
-2. 实现核心启动/停止逻辑
-3. 测试基本代理功能
-4. 验证系统代理设置生效
+Windows 平台已完成：
+1. ✅ 下载 mihomo Windows 二进制 (v1.19.17)
+2. ✅ 实现核心启动/停止逻辑
+3. ✅ 测试基本代理功能
+4. ✅ 验证系统代理设置生效
+5. ✅ 自动登录和节点列表获取
+
+建议接下来完成：
+1. macOS 平台 mihomo 二进制打包
+2. 节点管理界面优化（分组、延迟测试）
+3. Android VpnService 实现
 
 ---
 

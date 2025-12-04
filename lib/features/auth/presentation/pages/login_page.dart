@@ -7,7 +7,10 @@ import '../../domain/auth_provider.dart';
 import '../../../../shared/themes/app_theme.dart';
 import '../../../../core/config/build_config.dart';
 import '../../../../core/utils/dev_mode.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../debug/presentation/pages/debug_panel.dart';
+import '../../../nodes/domain/nodes_provider.dart';
+import '../../../dashboard/domain/connection_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -95,6 +98,35 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (context) => const DebugPanel()));
+  }
+
+  /// 登录成功后获取节点列表
+  Future<void> _fetchNodesAfterLogin() async {
+    try {
+      final authState = ref.read(authProvider);
+      final subscribeUrl = authState.user?.subscription.subscriptionUrl;
+
+      if (subscribeUrl != null && subscribeUrl.isNotEmpty) {
+        VortexLogger.i('Fetching nodes from subscription: $subscribeUrl');
+
+        // 获取节点列表
+        await ref
+            .read(nodesProvider.notifier)
+            .refreshNodesFromUrl(subscribeUrl);
+
+        // 将节点列表设置到 VPN 服务
+        final nodesState = ref.read(nodesProvider);
+        if (nodesState.nodes.isNotEmpty) {
+          ref.read(connectionProvider.notifier).setNodes(nodesState.nodes);
+          VortexLogger.i('Loaded ${nodesState.nodes.length} nodes after login');
+        }
+      } else {
+        VortexLogger.w('No subscription URL available');
+      }
+    } catch (e) {
+      VortexLogger.e('Failed to fetch nodes after login', e);
+      // 获取节点失败不阻止登录成功
+    }
   }
 
   /// 检查邮箱是否在白名单中
@@ -253,6 +285,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               password: _passwordController.text,
             );
       }
+
+      // 登录/注册成功后自动获取节点列表
+      await _fetchNodesAfterLogin();
 
       if (mounted) {
         context.go('/dashboard');

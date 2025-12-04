@@ -40,15 +40,46 @@ bool MihomoCore::Init(const std::string& workDir) {
     // Ensure work directory exists
     CreateDirectoryA(workDir.c_str(), nullptr);
 
-    // Core binary path
+    // Core binary path in work directory
     corePath_ = workDir + "\\mihomo.exe";
 
-    // Check if core exists
+    // Check if core exists in work directory
     if (GetFileAttributesA(corePath_.c_str()) == INVALID_FILE_ATTRIBUTES) {
-        if (errorCallback_) {
-            errorCallback_("Core binary not found: " + corePath_);
+        // Try to copy from app directory
+        wchar_t exePath[MAX_PATH];
+        GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+
+        // Get directory of executable
+        std::wstring wExePath(exePath);
+        size_t lastSlash = wExePath.find_last_of(L"\\/");
+        std::wstring wAppDir = wExePath.substr(0, lastSlash);
+
+        // Source path - in same directory as app executable
+        std::wstring wSourcePath = wAppDir + L"\\mihomo.exe";
+
+        // Convert work dir to wide string
+        std::wstring wCorePath(corePath_.begin(), corePath_.end());
+
+        // Copy the file
+        if (!CopyFileW(wSourcePath.c_str(), wCorePath.c_str(), FALSE)) {
+            // Try alternative path - Resources/bin subdirectory
+            wSourcePath = wAppDir + L"\\data\\mihomo.exe";
+            if (!CopyFileW(wSourcePath.c_str(), wCorePath.c_str(), FALSE)) {
+                if (errorCallback_) {
+                    errorCallback_("Core binary not found. Please ensure mihomo.exe is in the application directory.");
+                }
+                // Log paths for debugging
+                if (logCallback_) {
+                    std::string srcPath(wSourcePath.begin(), wSourcePath.end());
+                    logCallback_("Searched paths: " + srcPath + " and app directory");
+                }
+                return false;
+            }
         }
-        return false;
+
+        if (logCallback_) {
+            logCallback_("Core binary copied to: " + corePath_);
+        }
     }
 
     return true;
