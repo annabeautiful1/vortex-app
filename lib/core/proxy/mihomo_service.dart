@@ -21,6 +21,21 @@ class MihomoService {
   static const int _defaultPort = 9090;
   static const String _defaultSecret = '';
 
+  // 延迟测试 URL 列表（按优先级排序）
+  static const List<String> delayTestUrls = [
+    'https://www.gstatic.com/generate_204', // Google - 最稳定
+    'https://cp.cloudflare.com/generate_204', // Cloudflare
+    'https://www.google.com/generate_204', // Google 备用
+    'http://www.msftconnecttest.com/connecttest.txt', // Microsoft
+  ];
+
+  // 默认延迟测试 URL
+  static const String defaultDelayTestUrl =
+      'https://www.gstatic.com/generate_204';
+
+  // 默认超时时间（毫秒）- 增加到 10 秒以适应跨国延迟
+  static const int defaultDelayTimeout = 10000;
+
   late Dio _dio;
   String _host = _defaultHost;
   int _port = _defaultPort;
@@ -198,34 +213,63 @@ class MihomoService {
     }
   }
 
-  /// 测试代理延迟
-  Future<int?> testProxyDelay(
-    String name, {
-    String url = 'http://www.gstatic.com/generate_204',
-    int timeout = 5000,
-  }) async {
+  /// 测试代理延迟（真实 TCP 延迟）
+  /// 使用 HTTPS URL 测试完整的 TLS 握手延迟，反映真实使用体验
+  ///
+  /// [name] 代理名称
+  /// [url] 测试 URL，默认使用 Google generate_204
+  /// [timeout] 超时时间（毫秒），默认 10 秒
+  Future<int?> testProxyDelay(String name, {String? url, int? timeout}) async {
+    final testUrl = url ?? defaultDelayTestUrl;
+    final testTimeout = timeout ?? defaultDelayTimeout;
+
     try {
       final response = await _dio.get(
         '/proxies/${Uri.encodeComponent(name)}/delay',
-        queryParameters: {'url': url, 'timeout': timeout},
+        queryParameters: {'url': testUrl, 'timeout': testTimeout},
+        options: Options(
+          receiveTimeout: Duration(milliseconds: testTimeout + 2000),
+        ),
       );
-      return response.data['delay'] as int?;
+      final delay = response.data['delay'] as int?;
+      if (delay != null && delay > 0) {
+        VortexLogger.d('Delay test for $name: ${delay}ms');
+      }
+      return delay;
     } catch (e) {
-      VortexLogger.w('Delay test failed for $name');
+      VortexLogger.w('Delay test failed for $name: $e');
       return null;
     }
   }
 
-  /// 批量测试延迟
+  /// 使用多个 URL 测试延迟，返回最快的有效结果
+  /// 这种方式可以避免单一 URL 被墙导致的测试失败
+  Future<int?> testProxyDelayWithFallback(String name) async {
+    for (final url in delayTestUrls) {
+      final delay = await testProxyDelay(name, url: url, timeout: 8000);
+      if (delay != null && delay > 0) {
+        return delay;
+      }
+    }
+    return null;
+  }
+
+  /// 批量测试延迟（组内所有节点）
   Future<Map<String, int?>> testGroupDelay(
     String groupName, {
-    String url = 'http://www.gstatic.com/generate_204',
-    int timeout = 5000,
+    String? url,
+    int? timeout,
   }) async {
+    final testUrl = url ?? defaultDelayTestUrl;
+    final testTimeout = timeout ?? defaultDelayTimeout;
+
     try {
       final response = await _dio.get(
         '/group/${Uri.encodeComponent(groupName)}/delay',
-        queryParameters: {'url': url, 'timeout': timeout},
+        queryParameters: {'url': testUrl, 'timeout': testTimeout},
+        options: Options(
+          receiveTimeout: Duration(milliseconds: testTimeout + 5000),
+        ),
       );
       final data = response.data as Map<String, dynamic>;
       return data.map((key, value) => MapEntry(key, value as int?));
@@ -233,6 +277,38 @@ class MihomoService {
       VortexLogger.e('Group delay test failed', e);
       return {};
     }
+  }
+
+  /// 并发测试多个节点的延迟
+  /// 返回 Map<节点名, 延迟(ms)>，超时或失败的节点值为 null
+  Future<Map<String, int?>> testMultipleProxyDelay(
+    List<String> names, {
+    String? url,
+    int? timeout,
+    int concurrency = 5, // 并发数量限制
+  }) async {
+    final results = <String, int?>{};
+    final testUrl = url ?? defaultDelayTestUrl;
+    final testTimeout = timeout ?? defaultDelayTimeout;
+
+    // 分批并发测试
+    for (var i = 0; i < names.length; i += concurrency) {
+      final batch = names.skip(i).take(concurrency).toList();
+      final futures = batch.map(
+        (name) => testProxyDelay(
+          name,
+          url: testUrl,
+          timeout: testTimeout,
+        ).then((delay) => MapEntry(name, delay)),
+      );
+
+      final batchResults = await Future.wait(futures);
+      for (final entry in batchResults) {
+        results[entry.key] = entry.value;
+      }
+    }
+
+    return results;
   }
 
   /// 获取规则
@@ -411,6 +487,11 @@ class MihomoService {
       'ipv6': false,
       'external-controller': '$_host:$_port',
       if (_secret.isNotEmpty) 'secret': _secret,
+      // 启用统一延迟测试 - 测量完整的 TCP/TLS 握手延迟
+      // 参考 clash verge rev 的实现
+      'unified-delay': true,
+      // TCP 并发，提高连接成功率
+      'tcp-concurrent': true,
       'dns': {
         'enable': true,
         'enhanced-mode': 'fake-ip',
@@ -441,8 +522,10 @@ class MihomoService {
           'name': 'AUTO',
           'type': 'url-test',
           'proxies': nodes.map((n) => n.name).toList(),
-          'url': 'http://www.gstatic.com/generate_204',
+          // 使用 HTTPS URL 测试真实 TLS 延迟
+          'url': defaultDelayTestUrl,
           'interval': 300,
+          'tolerance': 50, // 容差 50ms，避免频繁切换
         },
       ],
       'rules': ['GEOIP,LAN,DIRECT', 'GEOIP,CN,DIRECT', 'MATCH,PROXY'],
