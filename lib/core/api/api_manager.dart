@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../utils/logger.dart';
 import '../utils/dev_mode.dart';
@@ -215,8 +216,17 @@ URL: $testUrl
       if (response.statusCode == 200) {
         if (BuildConfig.instance.isV2board) {
           // V2board returns JSON with data field
-          final data = response.data;
-          final success = data != null && data['data'] != null;
+          var data = response.data;
+          // 如果是字符串，先解析为 Map
+          if (data is String) {
+            try {
+              data = jsonDecode(data);
+            } catch (e) {
+              DevMode.instance.error('ApiManager', 'V2board JSON 解析失败', e);
+              return false;
+            }
+          }
+          final success = data != null && data is Map && data['data'] != null;
           DevMode.instance.log(
             'ApiManager',
             'V2board 端点测试',
@@ -224,12 +234,31 @@ URL: $testUrl
           );
           return success;
         } else {
-          // SSPanel returns JSON with config fields
-          final data = response.data;
+          // SSPanel returns JSON (可能是 String 或已解析的 Map)
+          var data = response.data;
+          // 如果是字符串，先解析为 Map
+          if (data is String) {
+            try {
+              data = jsonDecode(data);
+            } catch (e) {
+              DevMode.instance.error('ApiManager', 'SSPanel JSON 解析失败', e);
+              return false;
+            }
+          }
+
+          if (data is! Map) {
+            DevMode.instance.log(
+              'ApiManager',
+              'SSPanel 响应不是 Map',
+              detail: '类型: ${data.runtimeType}',
+              isError: true,
+            );
+            return false;
+          }
+
           final success =
-              data != null &&
-              (data['is_email_verify'] != null ||
-                  data['app_description'] != null);
+              data['is_email_verify'] != null ||
+              data['app_description'] != null;
           DevMode.instance.log(
             'ApiManager',
             'SSPanel 端点测试',
