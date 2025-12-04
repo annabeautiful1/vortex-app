@@ -231,9 +231,18 @@ jobs:
           cd build/windows/x64/runner/Release
           Compress-Archive -Path * -DestinationPath Vortex-Windows-Portable.zip
 
-      - name: Install Inno Setup
+      - name: Install Inno Setup with Languages
         run: |
-          choco install innosetup -y
+          # Download and install Inno Setup with all languages
+          $innoUrl = "https://jrsoftware.org/download.php/is.exe"
+          $innoInstaller = "$env:TEMP\innosetup.exe"
+          Invoke-WebRequest -Uri $innoUrl -OutFile $innoInstaller
+          Start-Process -FilePath $innoInstaller -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-" -Wait
+
+          # Download Chinese language file
+          $langUrl = "https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/Unofficial/ChineseSimplified.isl"
+          $langDir = "C:\Program Files (x86)\Inno Setup 6\Languages"
+          Invoke-WebRequest -Uri $langUrl -OutFile "$langDir\ChineseSimplified.isl"
 
       - name: Create Installer Script
         run: |
