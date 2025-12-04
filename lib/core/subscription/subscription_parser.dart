@@ -206,6 +206,14 @@ class SubscriptionParser {
   /// 解析YAML块为Map
   Map<String, dynamic> _parseYamlBlock(String block) {
     final props = <String, dynamic>{};
+    final trimmedBlock = block.trim();
+
+    // 检查是否为内联格式 { key: value, key: value }
+    if (trimmedBlock.startsWith('{') && trimmedBlock.endsWith('}')) {
+      return _parseInlineYaml(trimmedBlock);
+    }
+
+    // 标准缩进格式
     final lines = block.split('\n');
 
     for (final line in lines) {
@@ -225,6 +233,80 @@ class SubscriptionParser {
       }
 
       // 尝试转换类型
+      if (value == 'true') {
+        props[key] = true;
+      } else if (value == 'false') {
+        props[key] = false;
+      } else if (int.tryParse(value) != null) {
+        props[key] = int.parse(value);
+      } else if (double.tryParse(value) != null) {
+        props[key] = double.parse(value);
+      } else {
+        props[key] = value;
+      }
+    }
+
+    return props;
+  }
+
+  /// 解析内联YAML格式 { key: value, key: value }
+  Map<String, dynamic> _parseInlineYaml(String inline) {
+    final props = <String, dynamic>{};
+
+    // 移除花括号
+    var content = inline.substring(1, inline.length - 1).trim();
+    if (content.isEmpty) return props;
+
+    // 解析键值对，处理带引号的值中的逗号
+    int i = 0;
+    while (i < content.length) {
+      // 跳过空格
+      while (i < content.length && content[i] == ' ') {
+        i++;
+      }
+      if (i >= content.length) break;
+
+      // 找到键
+      final colonIndex = content.indexOf(':', i);
+      if (colonIndex == -1) break;
+
+      final key = content.substring(i, colonIndex).trim();
+      i = colonIndex + 1;
+
+      // 跳过冒号后的空格
+      while (i < content.length && content[i] == ' ') {
+        i++;
+      }
+      if (i >= content.length) break;
+
+      // 解析值
+      String value;
+      if (content[i] == "'" || content[i] == '"') {
+        // 带引号的值
+        final quote = content[i];
+        i++;
+        final endQuote = content.indexOf(quote, i);
+        if (endQuote == -1) break;
+        value = content.substring(i, endQuote);
+        i = endQuote + 1;
+      } else {
+        // 无引号的值，找到下一个逗号或结尾
+        final nextComma = content.indexOf(',', i);
+        if (nextComma == -1) {
+          value = content.substring(i).trim();
+          i = content.length;
+        } else {
+          value = content.substring(i, nextComma).trim();
+          i = nextComma;
+        }
+      }
+
+      // 跳过逗号
+      if (i < content.length && content[i] == ',') {
+        i++;
+      }
+
+      // 存储值
       if (value == 'true') {
         props[key] = true;
       } else if (value == 'false') {
