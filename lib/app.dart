@@ -145,15 +145,34 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _initializeApp() async {
-    // 等待认证状态检查完成
-    // AuthNotifier 构造时会自动调用 _checkStoredSession
-    await Future.delayed(const Duration(milliseconds: 500));
+    VortexLogger.i('SplashScreen: Starting initialization...');
+
+    // 等待 AuthNotifier 完成初始化（最多 10 秒）
+    final authNotifier = ref.read(authProvider.notifier);
+    int waitCount = 0;
+    const maxWait = 100; // 10 seconds (100 * 100ms)
+
+    while (!authNotifier.isInitialized && waitCount < maxWait) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      waitCount++;
+    }
+
+    VortexLogger.i(
+      'SplashScreen: Auth initialization completed (waited ${waitCount * 100}ms)',
+    );
 
     // 如果已登录，加载节点列表
     final authState = ref.read(authProvider);
+    VortexLogger.i(
+      'SplashScreen: Auth state - isAuthenticated=${authState.isAuthenticated}, isLoading=${authState.isLoading}',
+    );
+
     if (authState.isAuthenticated) {
       await _loadNodesIfLoggedIn();
     }
+
+    // 额外等待一下让路由刷新
+    await Future.delayed(const Duration(milliseconds: 100));
   }
 
   Future<void> _loadNodesIfLoggedIn() async {

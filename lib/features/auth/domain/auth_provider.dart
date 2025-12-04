@@ -108,6 +108,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
   V2boardApi? _v2boardApi;
   SSPanelApi? _sspanelApi;
   List<String>? _sspanelCookies;
+  bool _isInitialized = false;
+
+  /// Check if initialization is complete
+  bool get isInitialized => _isInitialized;
 
   /// Get V2board API instance
   V2boardApi? get v2boardApi => _v2boardApi;
@@ -123,25 +127,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Initialize from BuildConfig
   Future<void> _initFromBuildConfig() async {
-    final config = BuildConfig.instance;
+    state = state.copyWith(isLoading: true);
 
-    // Set panel type from build config
-    final buildPanelType = config.isV2board
-        ? PanelType.v2board
-        : PanelType.sspanel;
-    state = state.copyWith(panelType: buildPanelType);
+    try {
+      final config = BuildConfig.instance;
 
-    // If we have API endpoints in config, use the first available one
-    if (config.hasApiEndpoints) {
-      final baseUrl = await ApiManager.instance.getActiveEndpointUrl();
-      if (baseUrl != null) {
-        state = state.copyWith(baseUrl: baseUrl);
-        await _initApiClient(baseUrl, buildPanelType);
+      // Set panel type from build config
+      final buildPanelType = config.isV2board
+          ? PanelType.v2board
+          : PanelType.sspanel;
+      state = state.copyWith(panelType: buildPanelType);
+
+      // If we have API endpoints in config, use the first available one
+      if (config.hasApiEndpoints) {
+        final baseUrl = await ApiManager.instance.getActiveEndpointUrl();
+        if (baseUrl != null) {
+          state = state.copyWith(baseUrl: baseUrl);
+          await _initApiClient(baseUrl, buildPanelType);
+        }
+      }
+
+      // Then check for stored session
+      await _checkStoredSession();
+    } catch (e) {
+      VortexLogger.e('Failed to initialize from build config', e);
+    } finally {
+      _isInitialized = true;
+      if (!state.isAuthenticated) {
+        state = state.copyWith(isLoading: false);
       }
     }
-
-    // Then check for stored session
-    await _checkStoredSession();
   }
 
   /// Initialize API client based on panel type
@@ -157,6 +172,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> _checkStoredSession() async {
+    VortexLogger.i('Checking stored session...');
+
     final authData = await StorageService.instance.getSecure(
       AppConstants.tokenKey,
     );
@@ -165,29 +182,53 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
     final panelTypeStr = StorageService.instance.getString('panel_type');
 
-    if (authData != null && baseUrl != null) {
-      state = state.copyWith(isLoading: true);
+    VortexLogger.i(
+      'Stored session: authData=${authData != null}, baseUrl=$baseUrl, panelType=$panelTypeStr',
+    );
+
+    if (authData != null && authData.isNotEmpty) {
       try {
+        // Determine panel type
         final panelType = panelTypeStr == 'sspanel'
             ? PanelType.sspanel
             : PanelType.v2board;
 
+        // Use stored baseUrl or try to get from ApiManager
+        String? effectiveBaseUrl = baseUrl;
+        if (effectiveBaseUrl == null || effectiveBaseUrl.isEmpty) {
+          effectiveBaseUrl = await ApiManager.instance.getActiveEndpointUrl();
+        }
+
+        if (effectiveBaseUrl == null || effectiveBaseUrl.isEmpty) {
+          VortexLogger.w('No base URL available for session restore');
+          return;
+        }
+
+        VortexLogger.i(
+          'Restoring session: panelType=$panelType, baseUrl=$effectiveBaseUrl',
+        );
+
         if (panelType == PanelType.v2board) {
-          _v2boardApi = V2boardApi(baseUrl: baseUrl);
+          _v2boardApi = V2boardApi(baseUrl: effectiveBaseUrl);
           _v2boardApi!.setAuthData(authData);
           await _fetchV2boardUserInfo();
         } else {
-          _sspanelApi = SSPanelApi(baseUrl: baseUrl);
+          _sspanelApi = SSPanelApi(baseUrl: effectiveBaseUrl);
           _sspanelCookies = authData.split('|||');
           _sspanelApi!.setCookies(_sspanelCookies!);
           await _fetchSSPanelUserInfo();
         }
 
-        state = state.copyWith(panelType: panelType, baseUrl: baseUrl);
+        state = state.copyWith(panelType: panelType, baseUrl: effectiveBaseUrl);
+        VortexLogger.i('Session restored successfully');
       } catch (e) {
         VortexLogger.e('Failed to restore session', e);
-        await logout();
+        // Clear invalid session data
+        await StorageService.instance.deleteSecure(AppConstants.tokenKey);
+        state = state.copyWith(isAuthenticated: false, isLoading: false);
       }
+    } else {
+      VortexLogger.i('No stored session found');
     }
   }
 

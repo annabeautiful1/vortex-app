@@ -47,6 +47,11 @@ class BuildConfig {
   final String homepageUrl;
   final String supportUrl;
   final String telegramUrl;
+  final String? privacyUrl;
+  final String? termsUrl;
+
+  // Version
+  final String appVersion;
 
   const BuildConfig._({
     required this.appName,
@@ -63,6 +68,9 @@ class BuildConfig {
     required this.homepageUrl,
     required this.supportUrl,
     required this.telegramUrl,
+    this.privacyUrl,
+    this.termsUrl,
+    this.appVersion = '1.0.0',
   });
 
   /// Load build configuration from assets
@@ -98,6 +106,9 @@ class BuildConfig {
         homepageUrl: _getString(yaml, 'homepage_url', ''),
         supportUrl: _getString(yaml, 'support_url', ''),
         telegramUrl: _getString(yaml, 'telegram_url', ''),
+        privacyUrl: _getStringOrNull(yaml, 'privacy_url'),
+        termsUrl: _getStringOrNull(yaml, 'terms_url'),
+        appVersion: _getString(yaml, 'app_version', '1.0.0'),
       );
 
       VortexLogger.i(
@@ -152,6 +163,15 @@ API 地址列表: ${_instance!.apiEndpoints.join(', ')}''',
     final value = yaml[key];
     if (value == null || value.toString().isEmpty) {
       return defaultValue;
+    }
+    return value.toString();
+  }
+
+  /// Get optional string from yaml (returns null if not found)
+  static String? _getStringOrNull(YamlMap yaml, String key) {
+    final value = yaml[key];
+    if (value == null || value.toString().isEmpty) {
+      return null;
     }
     return value.toString();
   }
