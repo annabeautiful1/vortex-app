@@ -200,19 +200,96 @@ jobs:
       - name: Enable Windows desktop
         run: flutter config --enable-windows-desktop
 
+      - name: Download Mihomo Core
+        run: |
+          $mihomoVersion = "v1.19.17"
+          $downloadUrl = "https://github.com/MetaCubeX/mihomo/releases/download/$mihomoVersion/mihomo-windows-amd64-compatible-$mihomoVersion.zip"
+          $zipPath = "$env:TEMP\mihomo.zip"
+          $extractPath = "$env:TEMP\mihomo"
+
+          Write-Host "Downloading Mihomo $mihomoVersion..."
+          Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath
+
+          Write-Host "Extracting..."
+          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+
+          # Create target directory
+          $targetDir = "windows\runner\Resources\bin"
+          New-Item -ItemType Directory -Force -Path $targetDir
+
+          # Copy mihomo.exe
+          $mihomoExe = Get-ChildItem -Path $extractPath -Filter "*.exe" -Recurse | Select-Object -First 1
+          Copy-Item -Path $mihomoExe.FullName -Destination "$targetDir\mihomo.exe"
+
+          Write-Host "Mihomo core installed to $targetDir\mihomo.exe"
+
       - name: Build Windows
         run: flutter build windows --release
 
-      - name: Create ZIP
+      - name: Create portable ZIP
         run: |
           cd build/windows/x64/runner/Release
-          Compress-Archive -Path * -DestinationPath Vortex-Windows.zip
+          Compress-Archive -Path * -DestinationPath Vortex-Windows-Portable.zip
 
-      - name: Upload Windows Build
+      - name: Install Inno Setup
+        run: |
+          choco install innosetup -y
+
+      - name: Create Installer Script
+        run: |
+          @"
+          [Setup]
+          AppName=Vortex
+          AppVersion=1.0.0
+          AppPublisher=Vortex Team
+          DefaultDirName={autopf}\Vortex
+          DefaultGroupName=Vortex
+          OutputDir=.
+          OutputBaseFilename=Vortex-Windows-Setup
+          Compression=lzma2
+          SolidCompression=yes
+          PrivilegesRequired=admin
+          ArchitecturesAllowed=x64compatible
+          ArchitecturesInstallIn64BitMode=x64compatible
+
+          [Languages]
+          Name: "english"; MessagesFile: "compiler:Default.isl"
+          Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
+
+          [Tasks]
+          Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+          Name: "autostart"; Description: "Start Vortex when Windows starts"; GroupDescription: "Other options:"; Flags: unchecked
+
+          [Files]
+          Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+          [Icons]
+          Name: "{group}\Vortex"; Filename: "{app}\vortex_app.exe"
+          Name: "{group}\Uninstall Vortex"; Filename: "{uninstallexe}"
+          Name: "{autodesktop}\Vortex"; Filename: "{app}\vortex_app.exe"; Tasks: desktopicon
+
+          [Registry]
+          Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Vortex"; ValueData: """{app}\vortex_app.exe"""; Flags: uninsdeletevalue; Tasks: autostart
+
+          [Run]
+          Filename: "{app}\vortex_app.exe"; Description: "{cm:LaunchProgram,Vortex}"; Flags: nowait postinstall skipifsilent
+          "@ | Out-File -FilePath "installer.iss" -Encoding UTF8
+
+      - name: Build Installer
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+
+      - name: Upload Windows Portable
         uses: actions/upload-artifact@v4
         with:
-          name: windows-build
-          path: build/windows/x64/runner/Release/Vortex-Windows.zip
+          name: windows-portable
+          path: build/windows/x64/runner/Release/Vortex-Windows-Portable.zip
+
+      - name: Upload Windows Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: Vortex-Windows-Setup.exe
 
   # Create Release (only on tags)
   release:
@@ -239,7 +316,8 @@ jobs:
             artifacts/android-aab/app-release.aab
             artifacts/ios-build/vortex-unsigned.ipa
             artifacts/macos-build/Vortex-macOS.dmg
-            artifacts/windows-build/Vortex-Windows.zip
+            artifacts/windows-portable/Vortex-Windows-Portable.zip
+            artifacts/windows-installer/Vortex-Windows-Setup.exe
           draft: false
           prerelease: false
           generate_release_notes: true
