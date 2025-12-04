@@ -16,6 +16,12 @@ class SSPanelApi {
           connectTimeout: AppConstants.connectTimeout,
           receiveTimeout: AppConstants.apiTimeout,
           sendTimeout: AppConstants.apiTimeout,
+          followRedirects: true,
+          maxRedirects: 5,
+          // SSPanel 需要 form-urlencoded 格式
+          contentType: Headers.formUrlEncodedContentType,
+          // 允许 200-399 的状态码（包括重定向）
+          validateStatus: (status) => status != null && status < 400,
         ),
       ) {
     _dio.interceptors.add(
