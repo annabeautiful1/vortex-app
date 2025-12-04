@@ -5,6 +5,7 @@ import '../widgets/connection_button.dart';
 import '../widgets/status_card.dart';
 import '../widgets/traffic_card.dart';
 import '../widgets/quick_actions.dart';
+import '../widgets/realtime_traffic_card.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -58,18 +59,39 @@ class DashboardPage extends ConsumerWidget {
               // Status cards row
               LayoutBuilder(
                 builder: (context, constraints) {
-                  if (constraints.maxWidth > 600) {
+                  if (constraints.maxWidth > 900) {
+                    // Wide screen: 3 columns
                     return const Row(
                       children: [
                         Expanded(child: StatusCard()),
                         SizedBox(width: 16),
+                        Expanded(child: RealtimeTrafficCard()),
+                        SizedBox(width: 16),
                         Expanded(child: TrafficCard()),
                       ],
                     );
+                  } else if (constraints.maxWidth > 600) {
+                    // Medium screen: 2 rows
+                    return const Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(child: StatusCard()),
+                            SizedBox(width: 16),
+                            Expanded(child: RealtimeTrafficCard()),
+                          ],
+                        ),
+                        SizedBox(height: 16),
+                        TrafficCard(),
+                      ],
+                    );
                   } else {
+                    // Narrow screen: single column
                     return const Column(
                       children: [
                         StatusCard(),
+                        SizedBox(height: 16),
+                        RealtimeTrafficCard(),
                         SizedBox(height: 16),
                         TrafficCard(),
                       ],

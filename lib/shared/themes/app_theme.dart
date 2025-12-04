@@ -20,6 +20,10 @@ class AppTheme {
   static const Color connectingColor = Color(0xFFF59E0B);
   static const Color disconnectedColor = Color(0xFF6B7280);
 
+  // Traffic Colors
+  static const Color uploadColor = Color(0xFF8B5CF6); // Purple for upload
+  static const Color downloadColor = Color(0xFF06B6D4); // Cyan for download
+
   // Light Theme
   static ThemeData get lightTheme {
     return ThemeData(
