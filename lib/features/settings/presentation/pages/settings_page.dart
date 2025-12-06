@@ -151,7 +151,7 @@ class SettingsPage extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Settings',
+                '设置',
                 style: GoogleFonts.outfit(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -163,13 +163,13 @@ class SettingsPage extends ConsumerWidget {
 
               // General settings
               _SettingsSection(
-                title: 'General',
+                title: '通用',
                 delay: 100,
                 children: [
                   _SettingsTile(
                     icon: Icons.rocket_launch_rounded,
-                    title: 'Auto Start',
-                    subtitle: 'Launch at system startup',
+                    title: '开机启动',
+                    subtitle: '系统启动时自动运行',
                     trailing: Switch(
                       value: settings.autoStart,
                       onChanged: (value) =>
@@ -178,8 +178,8 @@ class SettingsPage extends ConsumerWidget {
                   ),
                   _SettingsTile(
                     icon: Icons.vpn_lock_rounded,
-                    title: 'TUN Mode',
-                    subtitle: 'Proxy all system traffic',
+                    title: 'TUN 模式',
+                    subtitle: '代理全部系统流量',
                     trailing: Switch(
                       value: settings.tunMode,
                       onChanged: (value) => settingsNotifier.setTunMode(value),
@@ -187,8 +187,8 @@ class SettingsPage extends ConsumerWidget {
                   ),
                   _SettingsTile(
                     icon: Icons.lan_rounded,
-                    title: 'Allow LAN',
-                    subtitle: 'Allow other devices to connect',
+                    title: '局域网访问',
+                    subtitle: '允许其他设备连接',
                     trailing: Switch(
                       value: settings.allowLan,
                       onChanged: (value) => settingsNotifier.setAllowLan(value),
@@ -200,34 +200,34 @@ class SettingsPage extends ConsumerWidget {
 
               // Appearance
               _SettingsSection(
-                title: 'Appearance',
+                title: '外观',
                 delay: 200,
                 children: [
                   _SettingsTile(
                     icon: Icons.dark_mode_rounded,
-                    title: 'Theme',
+                    title: '主题',
                     subtitle: _getThemeModeText(settings.themeMode),
                     onTap: () =>
                         _showThemePicker(context, ref, settings.themeMode),
                   ),
                   _SettingsTile(
                     icon: Icons.palette_rounded,
-                    title: 'Accent Color',
-                    subtitle: 'Customize app accent color',
+                    title: '主题色',
+                    subtitle: '自定义应用主题色',
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Coming soon...')),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(const SnackBar(content: Text('即将推出...')));
                     },
                   ),
                   _SettingsTile(
                     icon: Icons.language_rounded,
-                    title: 'Language',
-                    subtitle: 'English',
+                    title: '语言',
+                    subtitle: '简体中文',
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Coming soon...')),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(const SnackBar(content: Text('即将推出...')));
                     },
                   ),
                 ],
@@ -236,13 +236,13 @@ class SettingsPage extends ConsumerWidget {
 
               // Subscription
               _SettingsSection(
-                title: 'Subscription',
+                title: '订阅',
                 delay: 300,
                 children: [
                   _SettingsTile(
                     icon: Icons.sync_rounded,
-                    title: 'Auto Update',
-                    subtitle: 'Update subscription on startup',
+                    title: '自动更新',
+                    subtitle: '启动时自动更新订阅',
                     trailing: Switch(
                       value: settings.autoUpdateSubscription,
                       onChanged: (value) =>
@@ -251,8 +251,8 @@ class SettingsPage extends ConsumerWidget {
                   ),
                   _SettingsTile(
                     icon: Icons.link_rounded,
-                    title: 'Subscription URL',
-                    subtitle: 'Manage subscription link',
+                    title: '订阅链接',
+                    subtitle: '管理订阅链接',
                     onTap: () => _showSubscriptionInfo(context, ref),
                   ),
                 ],
@@ -261,25 +261,25 @@ class SettingsPage extends ConsumerWidget {
 
               // Advanced
               _SettingsSection(
-                title: 'Advanced',
+                title: '高级',
                 delay: 400,
                 children: [
                   _SettingsTile(
                     icon: Icons.article_rounded,
-                    title: 'View Logs',
-                    subtitle: 'Check application logs',
+                    title: '查看日志',
+                    subtitle: '查看应用日志',
                     onTap: () => _openLogDirectory(),
                   ),
                   _SettingsTile(
                     icon: Icons.file_download_rounded,
-                    title: 'Export Logs',
-                    subtitle: 'Export logs for troubleshooting',
+                    title: '导出日志',
+                    subtitle: '导出日志用于排查问题',
                     onTap: () => _exportLogs(context),
                   ),
                   _SettingsTile(
                     icon: Icons.cleaning_services_rounded,
-                    title: 'Clear Cache',
-                    subtitle: 'Clear application cache',
+                    title: '清除缓存',
+                    subtitle: '清除应用缓存',
                     onTap: () => _clearCache(context),
                   ),
                 ],
@@ -288,18 +288,18 @@ class SettingsPage extends ConsumerWidget {
 
               // About
               _SettingsSection(
-                title: 'About',
+                title: '关于',
                 delay: 500,
                 children: [
                   _SettingsTile(
                     icon: Icons.info_rounded,
-                    title: 'Version',
+                    title: '版本',
                     subtitle: config.appVersion,
                     onTap: () {},
                   ),
                   _SettingsTile(
                     icon: Icons.privacy_tip_rounded,
-                    title: 'Privacy Policy',
+                    title: '隐私政策',
                     onTap: () {
                       if (config.privacyUrl != null) {
                         launchUrl(Uri.parse(config.privacyUrl!));
@@ -308,7 +308,7 @@ class SettingsPage extends ConsumerWidget {
                   ),
                   _SettingsTile(
                     icon: Icons.description_rounded,
-                    title: 'Terms of Service',
+                    title: '服务条款',
                     onTap: () {
                       if (config.termsUrl != null) {
                         launchUrl(Uri.parse(config.termsUrl!));
@@ -317,7 +317,7 @@ class SettingsPage extends ConsumerWidget {
                   ),
                   _SettingsTile(
                     icon: Icons.logout_rounded,
-                    title: 'Logout',
+                    title: '退出登录',
                     textColor: AppTheme.errorColor,
                     onTap: () => _showLogoutDialog(context, ref),
                   ),
@@ -333,11 +333,11 @@ class SettingsPage extends ConsumerWidget {
   String _getThemeModeText(ThemeMode mode) {
     switch (mode) {
       case ThemeMode.light:
-        return 'Light';
+        return '浅色';
       case ThemeMode.dark:
-        return 'Dark';
+        return '深色';
       default:
-        return 'System';
+        return '跟随系统';
     }
   }
 
@@ -349,12 +349,12 @@ class SettingsPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Select Theme'),
+        title: const Text('选择主题'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             RadioListTile<ThemeMode>(
-              title: const Text('System'),
+              title: const Text('跟随系统'),
               value: ThemeMode.system,
               groupValue: currentMode,
               onChanged: (value) {
@@ -364,7 +364,7 @@ class SettingsPage extends ConsumerWidget {
               },
             ),
             RadioListTile<ThemeMode>(
-              title: const Text('Light'),
+              title: const Text('浅色'),
               value: ThemeMode.light,
               groupValue: currentMode,
               onChanged: (value) {
@@ -374,7 +374,7 @@ class SettingsPage extends ConsumerWidget {
               },
             ),
             RadioListTile<ThemeMode>(
-              title: const Text('Dark'),
+              title: const Text('深色'),
               value: ThemeMode.dark,
               groupValue: currentMode,
               onChanged: (value) {
@@ -391,18 +391,17 @@ class SettingsPage extends ConsumerWidget {
 
   void _showSubscriptionInfo(BuildContext context, WidgetRef ref) {
     final authState = ref.read(authProvider);
-    final subscribeUrl =
-        authState.user?.subscription.subscriptionUrl ?? 'Not set';
+    final subscribeUrl = authState.user?.subscription.subscriptionUrl ?? '未设置';
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Subscription Info'),
+        title: const Text('订阅信息'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('URL:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('链接:', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             SelectableText(subscribeUrl, style: const TextStyle(fontSize: 12)),
           ],
@@ -410,7 +409,7 @@ class SettingsPage extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: const Text('关闭'),
           ),
         ],
       ),
@@ -446,7 +445,7 @@ class SettingsPage extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('No logs found')));
+          ).showSnackBar(const SnackBar(content: Text('未找到日志')));
         }
         return;
       }
@@ -463,14 +462,14 @@ class SettingsPage extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Log directory opened')));
+        ).showSnackBar(const SnackBar(content: Text('日志目录已打开')));
       }
     } catch (e) {
       VortexLogger.e('Failed to export logs', e);
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+        ).showSnackBar(SnackBar(content: Text('导出失败: $e')));
       }
     }
   }
@@ -479,16 +478,16 @@ class SettingsPage extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear Cache'),
-        content: const Text('Are you sure you want to clear all cache?'),
+        title: const Text('清除缓存'),
+        content: const Text('确定要清除所有缓存吗？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text('取消'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Clear'),
+            child: const Text('清除'),
           ),
         ],
       ),
@@ -498,7 +497,7 @@ class SettingsPage extends ConsumerWidget {
       // Clear cache logic
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Cache cleared')));
+      ).showSnackBar(const SnackBar(content: Text('缓存已清除')));
     }
   }
 
@@ -506,12 +505,12 @@ class SettingsPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
+        title: const Text('退出登录'),
+        content: const Text('确定要退出登录吗？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('取消'),
           ),
           TextButton(
             onPressed: () async {
@@ -521,7 +520,7 @@ class SettingsPage extends ConsumerWidget {
                 context.go('/login');
               }
             },
-            child: Text('Logout', style: TextStyle(color: AppTheme.errorColor)),
+            child: Text('退出', style: TextStyle(color: AppTheme.errorColor)),
           ),
         ],
       ),

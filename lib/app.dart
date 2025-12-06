@@ -375,100 +375,152 @@ class MainShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      body: Row(
-        children: [
-          Container(
-            width: 280, // Fixed width sidebar for desktop
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              border: Border(
-                right: BorderSide(color: theme.dividerColor.withOpacity(0.1)),
-              ),
-            ),
-            child: Column(
-              children: [
-                const SizedBox(height: 32),
-                // Logo Area
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.cyclone,
-                          color: AppTheme.primaryColor,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        BuildConfig.instance.appName,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 窄屏幕时使用抽屉式导航
+        final isNarrow = constraints.maxWidth < 600;
 
-                // Navigation Items
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      children: [
-                        _buildNavItem(
-                          context,
-                          icon: Icons.dashboard_outlined,
-                          activeIcon: Icons.dashboard_rounded,
-                          label: 'Dashboard',
-                          path: '/dashboard',
-                        ),
-                        const SizedBox(height: 4),
-                        _buildNavItem(
-                          context,
-                          icon: Icons.dns_outlined,
-                          activeIcon: Icons.dns_rounded,
-                          label: 'Nodes',
-                          path: '/nodes',
-                        ),
-                        const SizedBox(height: 4),
-                        _buildNavItem(
-                          context,
-                          icon: Icons.settings_outlined,
-                          activeIcon: Icons.settings_rounded,
-                          label: 'Settings',
-                          path: '/settings',
-                        ),
-                        const SizedBox(height: 4),
-                        _buildNavItem(
-                          context,
-                          icon: Icons.support_agent_outlined,
-                          activeIcon: Icons.support_agent_rounded,
-                          label: 'Support',
-                          path: '/support',
-                        ),
-                      ],
+        if (isNarrow) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.cyclone,
+                      color: AppTheme.primaryColor,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    BuildConfig.instance.appName,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              elevation: 0,
+              backgroundColor: theme.colorScheme.surface,
+            ),
+            drawer: Drawer(child: _buildNavContent(context, theme)),
+            body: child,
+          );
+        }
+
+        // 宽屏幕时使用固定侧边栏
+        return Scaffold(
+          body: Row(
+            children: [
+              Container(
+                width: 240,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  border: Border(
+                    right: BorderSide(
+                      color: theme.dividerColor.withValues(alpha: 0.1),
                     ),
                   ),
                 ),
+                child: _buildNavContent(context, theme),
+              ),
+              Expanded(child: child),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
-                // User Profile / Bottom Actions could go here
-                const SizedBox(height: 24),
+  Widget _buildNavContent(BuildContext context, ThemeData theme) {
+    return Column(
+      children: [
+        const SizedBox(height: 32),
+        // Logo Area
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.cyclone,
+                  color: AppTheme.primaryColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  BuildConfig.instance.appName,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 32),
+
+        // Navigation Items
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                _buildNavItem(
+                  context,
+                  icon: Icons.dashboard_outlined,
+                  activeIcon: Icons.dashboard_rounded,
+                  label: '仪表盘',
+                  path: '/dashboard',
+                ),
+                const SizedBox(height: 4),
+                _buildNavItem(
+                  context,
+                  icon: Icons.dns_outlined,
+                  activeIcon: Icons.dns_rounded,
+                  label: '节点',
+                  path: '/nodes',
+                ),
+                const SizedBox(height: 4),
+                _buildNavItem(
+                  context,
+                  icon: Icons.settings_outlined,
+                  activeIcon: Icons.settings_rounded,
+                  label: '设置',
+                  path: '/settings',
+                ),
+                const SizedBox(height: 4),
+                _buildNavItem(
+                  context,
+                  icon: Icons.support_agent_outlined,
+                  activeIcon: Icons.support_agent_rounded,
+                  label: '客服',
+                  path: '/support',
+                ),
               ],
             ),
           ),
-          Expanded(child: child),
-        ],
-      ),
+        ),
+
+        // User Profile / Bottom Actions could go here
+        const SizedBox(height: 24),
+      ],
     );
   }
 

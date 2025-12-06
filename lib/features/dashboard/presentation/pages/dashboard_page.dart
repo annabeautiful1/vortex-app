@@ -32,7 +32,7 @@ class DashboardPage extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Dashboard',
+                        '仪表盘',
                         style: GoogleFonts.outfit(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
@@ -41,7 +41,7 @@ class DashboardPage extends ConsumerWidget {
                       ).animate().fadeIn().slideX(begin: -0.1, end: 0),
                       const SizedBox(height: 4),
                       Text(
-                            'Welcome back to Vortex',
+                            '欢迎回来',
                             style: theme.textTheme.bodyLarge?.copyWith(
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.6,
@@ -67,7 +67,7 @@ class DashboardPage extends ConsumerWidget {
                         // TODO: Refresh subscription
                       },
                       icon: const Icon(Icons.refresh_rounded),
-                      tooltip: 'Refresh Subscription',
+                      tooltip: '刷新订阅',
                       color: theme.colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ).animate().fadeIn(delay: 200.ms).scale(),

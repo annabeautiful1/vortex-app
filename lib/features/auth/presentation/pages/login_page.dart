@@ -245,310 +245,315 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
           ),
 
-          Center(
+          // 整个页面使用 SingleChildScrollView，滚动条在最右边
+          Positioned.fill(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Logo & Header
-                    GestureDetector(
-                      onTap: _handleLogoTap,
-                      child: Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.cyclone,
-                          size: 40,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                    ).animate().scale(
-                      duration: 600.ms,
-                      curve: Curves.easeOutBack,
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    Text(
-                      _isRegisterMode ? 'Create Account' : 'Welcome Back',
-                      style: GoogleFonts.outfit(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                      textAlign: TextAlign.center,
-                    ).animate().fadeIn().slideY(begin: 0.3, end: 0),
-
-                    const SizedBox(height: 8),
-
-                    Text(
-                          _isRegisterMode
-                              ? 'Sign up to get started with ${config.appName}'
-                              : 'Sign in to continue to ${config.appName}',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.6),
-                          ),
-                          textAlign: TextAlign.center,
-                        )
-                        .animate()
-                        .fadeIn(delay: 100.ms)
-                        .slideY(begin: 0.3, end: 0),
-
-                    const SizedBox(height: 48),
-
-                    // Form Card
-                    Container(
-                          padding: const EdgeInsets.all(32),
-                          decoration: BoxDecoration(
-                            color: theme.cardTheme.color,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: theme.dividerColor),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 60),
+                      // Logo & Header
+                      Center(
+                        child:
+                            GestureDetector(
+                              onTap: _handleLogoTap,
+                              child: Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.cyclone,
+                                  size: 40,
+                                  color: AppTheme.primaryColor,
+                                ),
                               ),
-                            ],
-                          ),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                if (_isRegisterMode && _isSSPanel) ...[
-                                  _buildTextField(
-                                    controller: _nameController,
-                                    label: 'Username',
-                                    icon: Icons.person_outline_rounded,
-                                    validator: (v) =>
-                                        v!.isEmpty ? 'Required' : null,
-                                  ),
-                                  const SizedBox(height: 20),
-                                ],
+                            ).animate().scale(
+                              duration: 600.ms,
+                              curve: Curves.easeOutBack,
+                            ),
+                      ),
 
-                                _buildTextField(
-                                  controller: _emailController,
-                                  label: 'Email',
-                                  icon: Icons.email_outlined,
-                                  hint: _isRegisterMode
-                                      ? _getEmailHint()
-                                      : null,
-                                  validator: (v) {
-                                    if (v!.isEmpty) return 'Required';
-                                    if (!v.contains('@'))
-                                      return 'Invalid email';
-                                    if (_isRegisterMode)
-                                      return _validateEmailWhitelist(v);
-                                    return null;
-                                  },
+                      const SizedBox(height: 32),
+
+                      Text(
+                        _isRegisterMode ? '创建账户' : '欢迎回来',
+                        style: GoogleFonts.outfit(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                        textAlign: TextAlign.center,
+                      ).animate().fadeIn().slideY(begin: 0.3, end: 0),
+
+                      const SizedBox(height: 8),
+
+                      Text(
+                            _isRegisterMode
+                                ? '注册以开始使用 ${config.appName}'
+                                : '登录以继续使用 ${config.appName}',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurface.withOpacity(
+                                0.6,
+                              ),
+                            ),
+                            textAlign: TextAlign.center,
+                          )
+                          .animate()
+                          .fadeIn(delay: 100.ms)
+                          .slideY(begin: 0.3, end: 0),
+
+                      const SizedBox(height: 48),
+
+                      // Form Card
+                      Container(
+                            padding: const EdgeInsets.all(32),
+                            decoration: BoxDecoration(
+                              color: theme.cardTheme.color,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: theme.dividerColor),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
                                 ),
-                                const SizedBox(height: 20),
-
-                                if (_isRegisterMode &&
-                                    _isEmailVerifyRequired) ...[
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        child: _buildTextField(
-                                          controller: _emailCodeController,
-                                          label: 'Code',
-                                          icon: Icons.verified_outlined,
-                                          validator: (v) =>
-                                              v!.isEmpty ? 'Required' : null,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      SizedBox(
-                                        height: 56,
-                                        child: OutlinedButton(
-                                          onPressed:
-                                              (_countdown > 0 || _isSendingCode)
-                                              ? null
-                                              : _sendEmailCode,
-                                          style: OutlinedButton.styleFrom(
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
-                                          ),
-                                          child: _isSendingCode
-                                              ? const SizedBox(
-                                                  width: 20,
-                                                  height: 20,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                      ),
-                                                )
-                                              : Text(
-                                                  _countdown > 0
-                                                      ? '${_countdown}s'
-                                                      : 'Send',
-                                                ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 20),
-                                ],
-
-                                _buildTextField(
-                                  controller: _passwordController,
-                                  label: 'Password',
-                                  icon: Icons.lock_outline_rounded,
-                                  obscureText: _obscurePassword,
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      _obscurePassword
-                                          ? Icons.visibility_outlined
-                                          : Icons.visibility_off_outlined,
-                                      color: theme.colorScheme.onSurface
-                                          .withOpacity(0.5),
+                              ],
+                            ),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  if (_isRegisterMode && _isSSPanel) ...[
+                                    _buildTextField(
+                                      controller: _nameController,
+                                      label: '用户名',
+                                      icon: Icons.person_outline_rounded,
+                                      validator: (v) =>
+                                          v!.isEmpty ? '请输入用户名' : null,
                                     ),
-                                    onPressed: () => setState(
-                                      () =>
-                                          _obscurePassword = !_obscurePassword,
-                                    ),
-                                  ),
-                                  validator: (v) {
-                                    if (v!.isEmpty) return 'Required';
-                                    if (_isRegisterMode && v.length < 6)
-                                      return 'Min 6 chars';
-                                    return null;
-                                  },
-                                ),
+                                    const SizedBox(height: 20),
+                                  ],
 
-                                if (_isRegisterMode) ...[
-                                  const SizedBox(height: 20),
                                   _buildTextField(
-                                    controller: _inviteCodeController,
-                                    label: _isInviteForceRequired
-                                        ? 'Invite Code (Required)'
-                                        : 'Invite Code (Optional)',
-                                    icon: Icons.card_giftcard_outlined,
+                                    controller: _emailController,
+                                    label: '邮箱',
+                                    icon: Icons.email_outlined,
+                                    hint: _isRegisterMode
+                                        ? _getEmailHint()
+                                        : null,
                                     validator: (v) {
-                                      if (_isInviteForceRequired &&
-                                          (v == null || v.isEmpty)) {
-                                        return 'Required';
-                                      }
+                                      if (v!.isEmpty) return '请输入邮箱';
+                                      if (!v.contains('@')) return '邮箱格式不正确';
+                                      if (_isRegisterMode)
+                                        return _validateEmailWhitelist(v);
                                       return null;
                                     },
                                   ),
-                                ],
+                                  const SizedBox(height: 20),
 
-                                if (_errorMessage != null) ...[
-                                  const SizedBox(height: 24),
-                                  Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.errorColor.withOpacity(
-                                        0.1,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: AppTheme.errorColor.withOpacity(
-                                          0.2,
-                                        ),
-                                      ),
-                                    ),
-                                    child: Row(
+                                  if (_isRegisterMode &&
+                                      _isEmailVerifyRequired) ...[
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        const Icon(
-                                          Icons.error_outline_rounded,
-                                          color: AppTheme.errorColor,
-                                          size: 20,
+                                        Expanded(
+                                          child: _buildTextField(
+                                            controller: _emailCodeController,
+                                            label: '验证码',
+                                            icon: Icons.verified_outlined,
+                                            validator: (v) =>
+                                                v!.isEmpty ? '请输入验证码' : null,
+                                          ),
                                         ),
                                         const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Text(
-                                            _errorMessage!,
-                                            style: const TextStyle(
-                                              color: AppTheme.errorColor,
-                                              fontSize: 13,
+                                        SizedBox(
+                                          height: 56,
+                                          child: OutlinedButton(
+                                            onPressed:
+                                                (_countdown > 0 ||
+                                                    _isSendingCode)
+                                                ? null
+                                                : _sendEmailCode,
+                                            style: OutlinedButton.styleFrom(
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
                                             ),
+                                            child: _isSendingCode
+                                                ? const SizedBox(
+                                                    width: 20,
+                                                    height: 20,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                        ),
+                                                  )
+                                                : Text(
+                                                    _countdown > 0
+                                                        ? '${_countdown}s'
+                                                        : '发送',
+                                                  ),
                                           ),
                                         ),
                                       ],
                                     ),
-                                  ).animate().fadeIn(),
-                                ],
+                                    const SizedBox(height: 20),
+                                  ],
 
-                                const SizedBox(height: 32),
-
-                                SizedBox(
-                                  height: 56,
-                                  child: ElevatedButton(
-                                    onPressed: _isLoading
-                                        ? null
-                                        : _handleSubmit,
-                                    child: _isLoading
-                                        ? const SizedBox(
-                                            height: 24,
-                                            width: 24,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2.5,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : Text(
-                                            _isRegisterMode
-                                                ? 'Create Account'
-                                                : 'Sign In',
-                                          ),
+                                  _buildTextField(
+                                    controller: _passwordController,
+                                    label: '密码',
+                                    icon: Icons.lock_outline_rounded,
+                                    obscureText: _obscurePassword,
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _obscurePassword
+                                            ? Icons.visibility_outlined
+                                            : Icons.visibility_off_outlined,
+                                        color: theme.colorScheme.onSurface
+                                            .withOpacity(0.5),
+                                      ),
+                                      onPressed: () => setState(
+                                        () => _obscurePassword =
+                                            !_obscurePassword,
+                                      ),
+                                    ),
+                                    validator: (v) {
+                                      if (v!.isEmpty) return '请输入密码';
+                                      if (_isRegisterMode && v.length < 6)
+                                        return '密码至少6位';
+                                      return null;
+                                    },
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                        .animate()
-                        .fadeIn(delay: 200.ms)
-                        .slideY(begin: 0.1, end: 0),
 
-                    const SizedBox(height: 24),
+                                  if (_isRegisterMode) ...[
+                                    const SizedBox(height: 20),
+                                    _buildTextField(
+                                      controller: _inviteCodeController,
+                                      label: _isInviteForceRequired
+                                          ? '邀请码（必填）'
+                                          : '邀请码（选填）',
+                                      icon: Icons.card_giftcard_outlined,
+                                      validator: (v) {
+                                        if (_isInviteForceRequired &&
+                                            (v == null || v.isEmpty)) {
+                                          return '请输入邀请码';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ],
 
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _isRegisterMode = !_isRegisterMode;
-                          _errorMessage = null;
-                          _emailCodeController.clear();
-                        });
-                      },
-                      child: RichText(
-                        text: TextSpan(
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.6),
-                          ),
-                          children: [
-                            TextSpan(
-                              text: _isRegisterMode
-                                  ? 'Already have an account? '
-                                  : 'Don\'t have an account? ',
-                            ),
-                            TextSpan(
-                              text: _isRegisterMode ? 'Sign in' : 'Sign up',
-                              style: TextStyle(
-                                color: AppTheme.primaryColor,
-                                fontWeight: FontWeight.bold,
+                                  if (_errorMessage != null) ...[
+                                    const SizedBox(height: 24),
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.errorColor.withOpacity(
+                                          0.1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: AppTheme.errorColor
+                                              .withOpacity(0.2),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.error_outline_rounded,
+                                            color: AppTheme.errorColor,
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              _errorMessage!,
+                                              style: const TextStyle(
+                                                color: AppTheme.errorColor,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ).animate().fadeIn(),
+                                  ],
+
+                                  const SizedBox(height: 32),
+
+                                  SizedBox(
+                                    height: 56,
+                                    child: ElevatedButton(
+                                      onPressed: _isLoading
+                                          ? null
+                                          : _handleSubmit,
+                                      child: _isLoading
+                                          ? const SizedBox(
+                                              height: 24,
+                                              width: 24,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2.5,
+                                                color: Colors.white,
+                                              ),
+                                            )
+                                          : Text(_isRegisterMode ? '注册' : '登录'),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
+                          )
+                          .animate()
+                          .fadeIn(delay: 200.ms)
+                          .slideY(begin: 0.1, end: 0),
+
+                      const SizedBox(height: 24),
+
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _isRegisterMode = !_isRegisterMode;
+                            _errorMessage = null;
+                            _emailCodeController.clear();
+                          });
+                        },
+                        child: RichText(
+                          text: TextSpan(
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurface.withOpacity(
+                                0.6,
+                              ),
+                            ),
+                            children: [
+                              TextSpan(
+                                text: _isRegisterMode ? '已有账户？' : '没有账户？',
+                              ),
+                              TextSpan(
+                                text: _isRegisterMode ? '立即登录' : '立即注册',
+                                style: TextStyle(
+                                  color: AppTheme.primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ).animate().fadeIn(delay: 300.ms),
-                  ],
+                      ).animate().fadeIn(delay: 300.ms),
+                      const SizedBox(height: 60),
+                    ],
+                  ),
                 ),
               ),
             ),

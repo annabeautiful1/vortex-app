@@ -33,7 +33,7 @@ class NodesPage extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Nodes',
+                        '节点',
                         style: GoogleFonts.outfit(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
@@ -42,7 +42,7 @@ class NodesPage extends ConsumerWidget {
                       ).animate().fadeIn().slideX(begin: -0.1, end: 0),
                       const SizedBox(height: 4),
                       Text(
-                            '${nodesState.nodes.length} available servers',
+                            '${nodesState.nodes.length} 个可用服务器',
                             style: theme.textTheme.bodyLarge?.copyWith(
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.6,
@@ -83,9 +83,7 @@ class NodesPage extends ConsumerWidget {
                                 ? AppTheme.warningColor
                                 : theme.colorScheme.onSurface.withOpacity(0.7),
                           ),
-                          tooltip: nodesState.isTesting
-                              ? 'Stop Test'
-                              : 'Test All',
+                          tooltip: nodesState.isTesting ? '停止测速' : '全部测速',
                         ),
                       ).animate().fadeIn(delay: 200.ms).scale(),
 
@@ -113,29 +111,19 @@ class NodesPage extends ConsumerWidget {
                                     .refreshNodesFromUrl(subscribeUrl);
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Nodes updated successfully',
-                                      ),
-                                    ),
+                                    const SnackBar(content: Text('节点更新成功')),
                                   );
                                 }
                               } catch (e) {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Update failed: $e'),
-                                    ),
+                                    SnackBar(content: Text('更新失败: $e')),
                                   );
                                 }
                               }
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Please login to get subscription',
-                                  ),
-                                ),
+                                const SnackBar(content: Text('请先登录以获取订阅')),
                               );
                             }
                           },
@@ -143,7 +131,7 @@ class NodesPage extends ConsumerWidget {
                             Icons.refresh_rounded,
                             color: theme.colorScheme.onSurface.withOpacity(0.7),
                           ),
-                          tooltip: 'Refresh Subscription',
+                          tooltip: '刷新订阅',
                         ),
                       ).animate().fadeIn(delay: 300.ms).scale(),
                     ],
@@ -174,14 +162,14 @@ class NodesPage extends ConsumerWidget {
           Icon(Icons.dns_outlined, size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
-            'No Nodes Available',
+            '暂无可用节点',
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
-            'Please refresh subscription to get nodes',
+            '请刷新订阅以获取节点',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade500),
@@ -200,7 +188,7 @@ class NodesPage extends ConsumerWidget {
     // Group nodes by group name
     final groupedNodes = <String, List<ProxyNode>>{};
     for (final node in nodesState.nodes) {
-      final group = node.group ?? 'Default Group';
+      final group = node.group ?? '默认分组';
       groupedNodes.putIfAbsent(group, () => []).add(node);
     }
 
@@ -409,7 +397,7 @@ class _NodeTile extends StatelessWidget {
       } else {
         // 超时或失败
         return Text(
-          'Timeout',
+          '超时',
           style: TextStyle(
             color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
             fontWeight: FontWeight.w500,
