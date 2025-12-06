@@ -24,9 +24,6 @@ class CrispService {
   final ValueNotifier<bool> operatorOnline = ValueNotifier(false);
   final ValueNotifier<bool> isConnected = ValueNotifier(false);
 
-  // Crisp REST API 基础 URL
-  static const String _apiBaseUrl = 'https://api.crisp.chat/v1';
-
   // Crisp 状态检查 URL (公开接口)
   static const String _statusBaseUrl = 'https://client.crisp.chat/v1';
 
