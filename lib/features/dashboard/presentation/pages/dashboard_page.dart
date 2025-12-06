@@ -1,21 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../widgets/connection_button.dart';
 import '../widgets/status_card.dart';
 import '../widgets/traffic_card.dart';
 import '../widgets/quick_actions.dart';
 import '../widgets/realtime_traffic_card.dart';
+import '../../../../shared/themes/app_theme.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -28,85 +34,105 @@ class DashboardPage extends ConsumerWidget {
                     children: [
                       Text(
                         'Dashboard',
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
+                        style: GoogleFonts.outfit(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ).animate().fadeIn().slideX(begin: -0.1, end: 0),
                       const SizedBox(height: 4),
                       Text(
-                        '欢迎使用 Vortex 漩涡',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        'Welcome back to Vortex',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
                         ),
-                      ),
+                      ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1, end: 0),
                     ],
                   ),
                   // Refresh button
-                  IconButton(
-                    onPressed: () {
-                      // TODO: Refresh subscription
-                    },
-                    icon: const Icon(Icons.refresh),
-                    tooltip: '刷新订阅',
-                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: theme.dividerColor.withOpacity(0.1),
+                      ),
+                    ),
+                    child: IconButton(
+                      onPressed: () {
+                        // TODO: Refresh subscription
+                      },
+                      icon: const Icon(Icons.refresh_rounded),
+                      tooltip: 'Refresh Subscription',
+                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                  ).animate().fadeIn(delay: 200.ms).scale(),
                 ],
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 48),
 
               // Connection button - center piece
-              const Center(child: ConnectionButton()),
-              const SizedBox(height: 32),
+              const Center(child: ConnectionButton())
+                  .animate()
+                  .fadeIn(delay: 300.ms)
+                  .scale(curve: Curves.easeOutBack),
+              const SizedBox(height: 48),
 
               // Status cards row
               LayoutBuilder(
                 builder: (context, constraints) {
                   if (constraints.maxWidth > 900) {
                     // Wide screen: 3 columns
-                    return const Row(
+                    return Row(
                       children: [
-                        Expanded(child: StatusCard()),
-                        SizedBox(width: 16),
-                        Expanded(child: RealtimeTrafficCard()),
-                        SizedBox(width: 16),
-                        Expanded(child: TrafficCard()),
+                        Expanded(child: _animateCard(const StatusCard(), 400)),
+                        const SizedBox(width: 24),
+                        Expanded(child: _animateCard(const RealtimeTrafficCard(), 500)),
+                        const SizedBox(width: 24),
+                        Expanded(child: _animateCard(const TrafficCard(), 600)),
                       ],
                     );
                   } else if (constraints.maxWidth > 600) {
                     // Medium screen: 2 rows
-                    return const Column(
+                    return Column(
                       children: [
                         Row(
                           children: [
-                            Expanded(child: StatusCard()),
-                            SizedBox(width: 16),
-                            Expanded(child: RealtimeTrafficCard()),
+                            Expanded(child: _animateCard(const StatusCard(), 400)),
+                            const SizedBox(width: 24),
+                            Expanded(child: _animateCard(const RealtimeTrafficCard(), 500)),
                           ],
                         ),
-                        SizedBox(height: 16),
-                        TrafficCard(),
+                        const SizedBox(height: 24),
+                        _animateCard(const TrafficCard(), 600),
                       ],
                     );
                   } else {
                     // Narrow screen: single column
-                    return const Column(
+                    return Column(
                       children: [
-                        StatusCard(),
-                        SizedBox(height: 16),
-                        RealtimeTrafficCard(),
-                        SizedBox(height: 16),
-                        TrafficCard(),
+                        _animateCard(const StatusCard(), 400),
+                        const SizedBox(height: 24),
+                        _animateCard(const RealtimeTrafficCard(), 500),
+                        const SizedBox(height: 24),
+                        _animateCard(const TrafficCard(), 600),
                       ],
                     );
                   }
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
 
               // Quick actions
-              const QuickActions(),
+              _animateCard(const QuickActions(), 700),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _animateCard(Widget child, int delayMs) {
+    return child.animate().fadeIn(delay: delayMs.ms).slideY(begin: 0.1, end: 0);
   }
 }

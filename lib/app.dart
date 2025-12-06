@@ -373,67 +373,156 @@ class MainShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       body: Row(
         children: [
-          NavigationRail(
-            selectedIndex: _getSelectedIndex(context),
-            onDestinationSelected: (index) =>
-                _onDestinationSelected(context, index),
-            labelType: NavigationRailLabelType.all,
-            destinations: const [
-              NavigationRailDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard),
-                label: Text('Dashboard'),
+          Container(
+            width: 280, // Fixed width sidebar for desktop
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              border: Border(
+                right: BorderSide(
+                  color: theme.dividerColor.withOpacity(0.1),
+                ),
               ),
-              NavigationRailDestination(
-                icon: Icon(Icons.dns_outlined),
-                selectedIcon: Icon(Icons.dns),
-                label: Text('Nodes'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings),
-                label: Text('Settings'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.support_agent_outlined),
-                selectedIcon: Icon(Icons.support_agent),
-                label: Text('Support'),
-              ),
-            ],
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 32),
+                // Logo Area
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.cyclone,
+                          color: AppTheme.primaryColor,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        BuildConfig.instance.appName,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                
+                // Navigation Items
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: [
+                        _buildNavItem(
+                          context,
+                          icon: Icons.dashboard_outlined,
+                          activeIcon: Icons.dashboard_rounded,
+                          label: 'Dashboard',
+                          path: '/dashboard',
+                        ),
+                        const SizedBox(height: 4),
+                        _buildNavItem(
+                          context,
+                          icon: Icons.dns_outlined,
+                          activeIcon: Icons.dns_rounded,
+                          label: 'Nodes',
+                          path: '/nodes',
+                        ),
+                        const SizedBox(height: 4),
+                        _buildNavItem(
+                          context,
+                          icon: Icons.settings_outlined,
+                          activeIcon: Icons.settings_rounded,
+                          label: 'Settings',
+                          path: '/settings',
+                        ),
+                        const SizedBox(height: 4),
+                        _buildNavItem(
+                          context,
+                          icon: Icons.support_agent_outlined,
+                          activeIcon: Icons.support_agent_rounded,
+                          label: 'Support',
+                          path: '/support',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                
+                // User Profile / Bottom Actions could go here
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
-          const VerticalDivider(thickness: 1, width: 1),
           Expanded(child: child),
         ],
       ),
     );
   }
 
-  int _getSelectedIndex(BuildContext context) {
+  Widget _buildNavItem(
+    BuildContext context, {
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+    required String path,
+  }) {
     final location = GoRouterState.of(context).uri.path;
-    if (location.startsWith('/dashboard')) return 0;
-    if (location.startsWith('/nodes')) return 1;
-    if (location.startsWith('/settings')) return 2;
-    if (location.startsWith('/support')) return 3;
-    return 0;
-  }
+    final isSelected = location.startsWith(path);
+    final theme = Theme.of(context);
 
-  void _onDestinationSelected(BuildContext context, int index) {
-    switch (index) {
-      case 0:
-        context.go('/dashboard');
-        break;
-      case 1:
-        context.go('/nodes');
-        break;
-      case 2:
-        context.go('/settings');
-        break;
-      case 3:
-        context.go('/support');
-        break;
-    }
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.go(path),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected 
+                ? AppTheme.primaryColor.withOpacity(0.1) 
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isSelected ? activeIcon : icon,
+                size: 22,
+                color: isSelected 
+                    ? AppTheme.primaryColor 
+                    : theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected 
+                      ? AppTheme.primaryColor 
+                      : theme.colorScheme.onSurface.withOpacity(0.7),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../shared/models/proxy_node.dart';
 import '../../../../shared/themes/app_theme.dart';
@@ -14,14 +16,16 @@ class NodesPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final nodesState = ref.watch(nodesProvider);
     final connectionState = ref.watch(connectionProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Column(
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(32),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -29,67 +33,95 @@ class NodesPage extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '节点列表',
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
+                        'Nodes',
+                        style: GoogleFonts.outfit(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ).animate().fadeIn().slideX(begin: -0.1, end: 0),
                       const SizedBox(height: 4),
                       Text(
-                        '${nodesState.nodes.length} 个节点可用',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        '${nodesState.nodes.length} available servers',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
                         ),
-                      ),
+                      ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1, end: 0),
                     ],
                   ),
                   Row(
                     children: [
-                      // 测速按钮 - 测速中时可点击停止
-                      IconButton(
-                        onPressed: () {
-                          if (nodesState.isTesting) {
-                            ref.read(nodesProvider.notifier).stopTesting();
-                          } else {
-                            ref.read(nodesProvider.notifier).testAllLatencies();
-                          }
-                        },
-                        icon: Icon(
-                          nodesState.isTesting ? Icons.stop : Icons.speed,
-                          color: nodesState.isTesting ? Colors.orange : null,
+                      // Speed Test Button
+                      Container(
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: theme.dividerColor.withOpacity(0.1),
+                          ),
                         ),
-                        tooltip: nodesState.isTesting ? '停止测速' : '测速全部',
-                      ),
-                      IconButton(
-                        onPressed: () async {
-                          final authState = ref.read(authProvider);
-                          final subscribeUrl =
-                              authState.user?.subscription.subscriptionUrl;
-                          if (subscribeUrl != null && subscribeUrl.isNotEmpty) {
-                            try {
-                              await ref
-                                  .read(nodesProvider.notifier)
-                                  .refreshNodesFromUrl(subscribeUrl);
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('节点更新成功')),
-                                );
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('更新失败: $e')),
-                                );
-                              }
+                        child: IconButton(
+                          onPressed: () {
+                            if (nodesState.isTesting) {
+                              ref.read(nodesProvider.notifier).stopTesting();
+                            } else {
+                              ref.read(nodesProvider.notifier).testAllLatencies();
                             }
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('请先登录并获取订阅')),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.refresh),
-                        tooltip: '刷新订阅',
-                      ),
+                          },
+                          icon: Icon(
+                            nodesState.isTesting ? Icons.stop_rounded : Icons.speed_rounded,
+                            color: nodesState.isTesting ? AppTheme.warningColor : theme.colorScheme.onSurface.withOpacity(0.7),
+                          ),
+                          tooltip: nodesState.isTesting ? 'Stop Test' : 'Test All',
+                        ),
+                      ).animate().fadeIn(delay: 200.ms).scale(),
+                      
+                      const SizedBox(width: 12),
+                      
+                      // Refresh Button
+                      Container(
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: theme.dividerColor.withOpacity(0.1),
+                          ),
+                        ),
+                        child: IconButton(
+                          onPressed: () async {
+                            final authState = ref.read(authProvider);
+                            final subscribeUrl =
+                                authState.user?.subscription.subscriptionUrl;
+                            if (subscribeUrl != null && subscribeUrl.isNotEmpty) {
+                              try {
+                                await ref
+                                    .read(nodesProvider.notifier)
+                                    .refreshNodesFromUrl(subscribeUrl);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Nodes updated successfully')),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Update failed: $e')),
+                                  );
+                                }
+                              }
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please login to get subscription')),
+                              );
+                            }
+                          },
+                          icon: Icon(
+                            Icons.refresh_rounded,
+                            color: theme.colorScheme.onSurface.withOpacity(0.7),
+                          ),
+                          tooltip: 'Refresh Subscription',
+                        ),
+                      ).animate().fadeIn(delay: 300.ms).scale(),
                     ],
                   ),
                 ],
@@ -118,21 +150,21 @@ class NodesPage extends ConsumerWidget {
           Icon(Icons.dns_outlined, size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
-            '暂无节点',
+            'No Nodes Available',
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
-            '请先更新订阅获取节点',
+            'Please refresh subscription to get nodes',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade500),
           ),
         ],
       ),
-    );
+    ).animate().fadeIn().scale();
   }
 
   Widget _buildNodesList(
@@ -144,12 +176,12 @@ class NodesPage extends ConsumerWidget {
     // Group nodes by group name
     final groupedNodes = <String, List<ProxyNode>>{};
     for (final node in nodesState.nodes) {
-      final group = node.group ?? '默认分组';
+      final group = node.group ?? 'Default Group';
       groupedNodes.putIfAbsent(group, () => []).add(node);
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
       itemCount: groupedNodes.length,
       itemBuilder: (context, index) {
         final group = groupedNodes.keys.elementAt(index);
@@ -159,15 +191,17 @@ class NodesPage extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               child: Text(
                 group,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.primary,
+                  letterSpacing: 0.5,
                 ),
               ),
-            ),
+            ).animate().fadeIn(delay: (index * 50).ms).slideX(),
             ...nodes.map(
               (node) => _NodeTile(
                 node: node,
@@ -178,9 +212,9 @@ class NodesPage extends ConsumerWidget {
                 onTap: () {
                   ref.read(connectionProvider.notifier).switchNode(node);
                 },
-              ),
+              ).animate().fadeIn(delay: (index * 50 + 100).ms).slideY(begin: 0.1, end: 0),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
           ],
         );
       },
@@ -207,71 +241,133 @@ class _NodeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      color: isConnected ? AppTheme.primaryColor.withValues(alpha: 0.1) : null,
-      child: ListTile(
-        onTap: onTap,
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: isConnected
-                ? AppTheme.connectedColor.withValues(alpha: 0.1)
-                : Colors.grey.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            isConnected ? Icons.check_circle : Icons.dns,
-            color: isConnected ? AppTheme.connectedColor : Colors.grey,
-          ),
+    final theme = Theme.of(context);
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isConnected 
+            ? AppTheme.primaryColor.withOpacity(0.05) 
+            : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isConnected 
+              ? AppTheme.primaryColor.withOpacity(0.2) 
+              : theme.dividerColor.withOpacity(0.05),
         ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                node.name,
-                style: TextStyle(
-                  fontWeight: isConnected ? FontWeight.w600 : FontWeight.normal,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Icon
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: isConnected
+                        ? AppTheme.primaryColor.withOpacity(0.1)
+                        : theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    isConnected ? Icons.check_circle_rounded : Icons.dns_rounded,
+                    color: isConnected ? AppTheme.primaryColor : theme.colorScheme.onSurfaceVariant,
+                    size: 24,
+                  ),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+                const SizedBox(width: 16),
+                
+                // Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              node.name,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: isConnected ? FontWeight.w600 : FontWeight.w500,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          if (node.multiplier != 1.0)
+                            _Tag(label: '${node.multiplier}x', color: AppTheme.warningColor),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            '${node.protocol.name.toUpperCase()} · ${node.server}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ...node.tags.take(3).map(
+                            (tag) => Padding(
+                              padding: const EdgeInsets.only(right: 4),
+                              child: _Tag(label: _getTagLabel(tag), color: _getTagColor(tag)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Latency
+                _buildLatencyWidget(theme),
+              ],
             ),
-            // Tags
-            if (node.multiplier != 1.0)
-              _Tag(label: '${node.multiplier}x', color: AppTheme.warningColor),
-            ...node.tags.map(
-              (tag) => _Tag(label: _getTagLabel(tag), color: _getTagColor(tag)),
-            ),
-          ],
+          ),
         ),
-        subtitle: Text(
-          '${node.protocol.name.toUpperCase()} · ${node.server}',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        trailing: _buildLatencyWidget(),
       ),
     );
   }
 
   /// 构建延迟显示组件
-  Widget _buildLatencyWidget() {
+  Widget _buildLatencyWidget(ThemeData theme) {
     // 已测试完成 - 显示延迟或超时
     if (hasTested) {
       if (latency != null && latency! > 0) {
-        return Text(
-          '$latency ms',
-          style: TextStyle(
-            color: _getLatencyColor(latency!),
-            fontWeight: FontWeight.w600,
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: _getLatencyColor(latency!).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            '$latency ms',
+            style: TextStyle(
+              color: _getLatencyColor(latency!),
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
           ),
         );
       } else {
         // 超时或失败
-        return const Text(
-          '超时',
-          style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
+        return Text(
+          'Timeout',
+          style: TextStyle(
+            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+            fontWeight: FontWeight.w500,
+            fontSize: 13,
+          ),
         );
       }
     }
@@ -283,23 +379,26 @@ class _NodeTile extends StatelessWidget {
         height: 16,
         child: CircularProgressIndicator(
           strokeWidth: 2,
-          color: Colors.grey.shade400,
+          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.3),
         ),
       );
     }
 
     // 未测试 - 显示箭头
-    return const Icon(Icons.chevron_right);
+    return Icon(
+      Icons.chevron_right_rounded,
+      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.3),
+    );
   }
 
   String _getTagLabel(NodeTag tag) {
     switch (tag) {
       case NodeTag.unlock:
-        return '解锁';
+        return 'Unlock';
       case NodeTag.gaming:
-        return '游戏';
+        return 'Game';
       case NodeTag.streaming:
-        return '流媒体';
+        return 'Stream';
       case NodeTag.chatgpt:
         return 'GPT';
       case NodeTag.netflix:
@@ -307,7 +406,7 @@ class _NodeTile extends StatelessWidget {
       case NodeTag.disney:
         return 'D+';
       case NodeTag.custom:
-        return node.customTag ?? '标签';
+        return node.customTag ?? 'Tag';
     }
   }
 
@@ -346,10 +445,9 @@ class _Tag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(left: 4),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(

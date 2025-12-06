@@ -4,12 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app.dart';
 import '../../../../core/config/build_config.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../shared/services/storage_service.dart';
 import '../../../../shared/services/tray_service.dart';
+import '../../../../shared/themes/app_theme.dart';
 import '../../../auth/domain/auth_provider.dart';
 
 /// Settings provider for managing settings state
@@ -137,30 +140,36 @@ class SettingsPage extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final settingsNotifier = ref.read(settingsProvider.notifier);
     final config = BuildConfig.instance;
+    final theme = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '设置',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                'Settings',
+                style: GoogleFonts.outfit(
+                  fontSize: 32,
                   fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
                 ),
-              ),
-              const SizedBox(height: 24),
+              ).animate().fadeIn().slideX(begin: -0.1, end: 0),
+              
+              const SizedBox(height: 32),
 
               // General settings
               _SettingsSection(
-                title: '通用',
+                title: 'General',
+                delay: 100,
                 children: [
                   _SettingsTile(
-                    icon: Icons.rocket_launch,
-                    title: '开机启动',
-                    subtitle: '系统启动时自动运行',
+                    icon: Icons.rocket_launch_rounded,
+                    title: 'Auto Start',
+                    subtitle: 'Launch at system startup',
                     trailing: Switch(
                       value: settings.autoStart,
                       onChanged: (value) =>
@@ -168,18 +177,18 @@ class SettingsPage extends ConsumerWidget {
                     ),
                   ),
                   _SettingsTile(
-                    icon: Icons.wifi_tethering,
-                    title: 'TUN 模式',
-                    subtitle: '代理全部系统流量',
+                    icon: Icons.vpn_lock_rounded,
+                    title: 'TUN Mode',
+                    subtitle: 'Proxy all system traffic',
                     trailing: Switch(
                       value: settings.tunMode,
                       onChanged: (value) => settingsNotifier.setTunMode(value),
                     ),
                   ),
                   _SettingsTile(
-                    icon: Icons.lan,
-                    title: '允许局域网连接',
-                    subtitle: '允许其他设备通过本机代理',
+                    icon: Icons.lan_rounded,
+                    title: 'Allow LAN',
+                    subtitle: 'Allow other devices to connect',
                     trailing: Switch(
                       value: settings.allowLan,
                       onChanged: (value) => settingsNotifier.setAllowLan(value),
@@ -191,32 +200,33 @@ class SettingsPage extends ConsumerWidget {
 
               // Appearance
               _SettingsSection(
-                title: '外观',
+                title: 'Appearance',
+                delay: 200,
                 children: [
                   _SettingsTile(
-                    icon: Icons.dark_mode,
-                    title: '深色模式',
+                    icon: Icons.dark_mode_rounded,
+                    title: 'Theme',
                     subtitle: _getThemeModeText(settings.themeMode),
                     onTap: () =>
                         _showThemePicker(context, ref, settings.themeMode),
                   ),
                   _SettingsTile(
-                    icon: Icons.palette,
-                    title: '主题色',
-                    subtitle: '自定义主题颜色',
+                    icon: Icons.palette_rounded,
+                    title: 'Accent Color',
+                    subtitle: 'Customize app accent color',
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('主题色功能开发中...')),
+                        const SnackBar(content: Text('Coming soon...')),
                       );
                     },
                   ),
                   _SettingsTile(
-                    icon: Icons.language,
-                    title: '语言',
-                    subtitle: '简体中文',
+                    icon: Icons.language_rounded,
+                    title: 'Language',
+                    subtitle: 'English',
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('多语言功能开发中...')),
+                        const SnackBar(content: Text('Coming soon...')),
                       );
                     },
                   ),
@@ -226,12 +236,13 @@ class SettingsPage extends ConsumerWidget {
 
               // Subscription
               _SettingsSection(
-                title: '订阅',
+                title: 'Subscription',
+                delay: 300,
                 children: [
                   _SettingsTile(
-                    icon: Icons.update,
-                    title: '自动更新订阅',
-                    subtitle: '每次启动时更新',
+                    icon: Icons.sync_rounded,
+                    title: 'Auto Update',
+                    subtitle: 'Update subscription on startup',
                     trailing: Switch(
                       value: settings.autoUpdateSubscription,
                       onChanged: (value) =>
@@ -239,9 +250,9 @@ class SettingsPage extends ConsumerWidget {
                     ),
                   ),
                   _SettingsTile(
-                    icon: Icons.link,
-                    title: '订阅地址',
-                    subtitle: '查看和管理订阅',
+                    icon: Icons.link_rounded,
+                    title: 'Subscription URL',
+                    subtitle: 'Manage subscription link',
                     onTap: () => _showSubscriptionInfo(context, ref),
                   ),
                 ],
@@ -250,24 +261,25 @@ class SettingsPage extends ConsumerWidget {
 
               // Advanced
               _SettingsSection(
-                title: '高级',
+                title: 'Advanced',
+                delay: 400,
                 children: [
                   _SettingsTile(
-                    icon: Icons.article,
-                    title: '查看日志',
-                    subtitle: '查看应用运行日志',
+                    icon: Icons.article_rounded,
+                    title: 'View Logs',
+                    subtitle: 'Check application logs',
                     onTap: () => _openLogDirectory(),
                   ),
                   _SettingsTile(
-                    icon: Icons.file_download,
-                    title: '导出日志',
-                    subtitle: '导出日志用于排查问题',
+                    icon: Icons.file_download_rounded,
+                    title: 'Export Logs',
+                    subtitle: 'Export logs for troubleshooting',
                     onTap: () => _exportLogs(context),
                   ),
                   _SettingsTile(
-                    icon: Icons.cleaning_services,
-                    title: '清除缓存',
-                    subtitle: '清除应用缓存数据',
+                    icon: Icons.cleaning_services_rounded,
+                    title: 'Clear Cache',
+                    subtitle: 'Clear application cache',
                     onTap: () => _clearCache(context),
                   ),
                 ],
@@ -276,17 +288,18 @@ class SettingsPage extends ConsumerWidget {
 
               // About
               _SettingsSection(
-                title: '关于',
+                title: 'About',
+                delay: 500,
                 children: [
                   _SettingsTile(
-                    icon: Icons.info,
-                    title: '版本',
+                    icon: Icons.info_rounded,
+                    title: 'Version',
                     subtitle: config.appVersion,
                     onTap: () {},
                   ),
                   _SettingsTile(
-                    icon: Icons.privacy_tip,
-                    title: '隐私政策',
+                    icon: Icons.privacy_tip_rounded,
+                    title: 'Privacy Policy',
                     onTap: () {
                       if (config.privacyUrl != null) {
                         launchUrl(Uri.parse(config.privacyUrl!));
@@ -294,8 +307,8 @@ class SettingsPage extends ConsumerWidget {
                     },
                   ),
                   _SettingsTile(
-                    icon: Icons.description,
-                    title: '服务条款',
+                    icon: Icons.description_rounded,
+                    title: 'Terms of Service',
                     onTap: () {
                       if (config.termsUrl != null) {
                         launchUrl(Uri.parse(config.termsUrl!));
@@ -303,9 +316,9 @@ class SettingsPage extends ConsumerWidget {
                     },
                   ),
                   _SettingsTile(
-                    icon: Icons.logout,
-                    title: '退出登录',
-                    textColor: Colors.red,
+                    icon: Icons.logout_rounded,
+                    title: 'Logout',
+                    textColor: AppTheme.errorColor,
                     onTap: () => _showLogoutDialog(context, ref),
                   ),
                 ],
@@ -320,11 +333,11 @@ class SettingsPage extends ConsumerWidget {
   String _getThemeModeText(ThemeMode mode) {
     switch (mode) {
       case ThemeMode.light:
-        return '浅色模式';
+        return 'Light';
       case ThemeMode.dark:
-        return '深色模式';
+        return 'Dark';
       default:
-        return '跟随系统';
+        return 'System';
     }
   }
 
@@ -336,12 +349,12 @@ class SettingsPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('选择主题'),
+        title: const Text('Select Theme'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             RadioListTile<ThemeMode>(
-              title: const Text('跟随系统'),
+              title: const Text('System'),
               value: ThemeMode.system,
               groupValue: currentMode,
               onChanged: (value) {
@@ -351,7 +364,7 @@ class SettingsPage extends ConsumerWidget {
               },
             ),
             RadioListTile<ThemeMode>(
-              title: const Text('浅色模式'),
+              title: const Text('Light'),
               value: ThemeMode.light,
               groupValue: currentMode,
               onChanged: (value) {
@@ -361,7 +374,7 @@ class SettingsPage extends ConsumerWidget {
               },
             ),
             RadioListTile<ThemeMode>(
-              title: const Text('深色模式'),
+              title: const Text('Dark'),
               value: ThemeMode.dark,
               groupValue: currentMode,
               onChanged: (value) {
@@ -378,17 +391,17 @@ class SettingsPage extends ConsumerWidget {
 
   void _showSubscriptionInfo(BuildContext context, WidgetRef ref) {
     final authState = ref.read(authProvider);
-    final subscribeUrl = authState.user?.subscription.subscriptionUrl ?? '未设置';
+    final subscribeUrl = authState.user?.subscription.subscriptionUrl ?? 'Not set';
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('订阅信息'),
+        title: const Text('Subscription Info'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('订阅地址:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('URL:', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             SelectableText(subscribeUrl, style: const TextStyle(fontSize: 12)),
           ],
@@ -396,7 +409,7 @@ class SettingsPage extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -432,7 +445,7 @@ class SettingsPage extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('暂无日志文件')));
+          ).showSnackBar(const SnackBar(content: Text('No logs found')));
         }
         return;
       }
@@ -449,14 +462,14 @@ class SettingsPage extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('已打开日志目录')));
+        ).showSnackBar(const SnackBar(content: Text('Log directory opened')));
       }
     } catch (e) {
       VortexLogger.e('Failed to export logs', e);
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('导出失败: $e')));
+        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
       }
     }
   }
@@ -465,16 +478,16 @@ class SettingsPage extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('清除缓存'),
-        content: const Text('确定要清除所有缓存数据吗？'),
+        title: const Text('Clear Cache'),
+        content: const Text('Are you sure you want to clear all cache?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('确定'),
+            child: const Text('Clear'),
           ),
         ],
       ),
@@ -484,7 +497,7 @@ class SettingsPage extends ConsumerWidget {
       // Clear cache logic
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('缓存已清除')));
+      ).showSnackBar(const SnackBar(content: Text('Cache cleared')));
     }
   }
 
@@ -492,12 +505,12 @@ class SettingsPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('退出登录'),
-        content: const Text('确定要退出登录吗？'),
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
@@ -507,7 +520,7 @@ class SettingsPage extends ConsumerWidget {
                 context.go('/login');
               }
             },
-            child: const Text('退出', style: TextStyle(color: Colors.red)),
+            child: Text('Logout', style: TextStyle(color: AppTheme.errorColor)),
           ),
         ],
       ),
@@ -518,28 +531,43 @@ class SettingsPage extends ConsumerWidget {
 class _SettingsSection extends StatelessWidget {
   final String title;
   final List<Widget> children;
+  final int delay;
 
-  const _SettingsSection({required this.title, required this.children});
+  const _SettingsSection({
+    required this.title, 
+    required this.children,
+    this.delay = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.primary,
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            title,
+            style: GoogleFonts.outfit(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.primary,
+              letterSpacing: 0.5,
+            ),
           ),
         ),
-        const SizedBox(height: 12),
-        Card(
-          margin: EdgeInsets.zero,
+        Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Theme.of(context).dividerColor.withOpacity(0.05),
+            ),
+          ),
           child: Column(children: children),
         ),
       ],
-    );
+    ).animate().fadeIn(delay: delay.ms).slideY(begin: 0.1, end: 0);
   }
 }
 
@@ -562,13 +590,66 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: textColor),
-      title: Text(title, style: TextStyle(color: textColor)),
-      subtitle: subtitle != null ? Text(subtitle!) : null,
-      trailing:
-          trailing ?? (onTap != null ? const Icon(Icons.chevron_right) : null),
-      onTap: trailing != null ? null : onTap,
+    final theme = Theme.of(context);
+    
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: trailing != null ? null : onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: (textColor ?? theme.colorScheme.primary).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  icon, 
+                  color: textColor ?? theme.colorScheme.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: textColor ?? theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (trailing != null)
+                trailing!
+              else if (onTap != null)
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                  size: 20,
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
