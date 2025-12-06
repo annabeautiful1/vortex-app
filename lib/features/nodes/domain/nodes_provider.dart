@@ -142,17 +142,34 @@ class NodesNotifier extends StateNotifier<NodesState> {
     }
   }
 
-  /// 测试所有节点延迟
+  /// 测试所有节点延迟（逐个测试，实时更新结果）
   Future<void> testAllLatencies() async {
+    if (state.isTesting) return; // 防止重复测试
     state = state.copyWith(isTesting: true);
 
     try {
-      final latencies = await ProxyCore.instance.testAllLatencies(state.nodes);
-      state = state.copyWith(latencies: latencies, isTesting: false);
+      // 清空旧的延迟数据
+      state = state.copyWith(latencies: {});
+
+      // 逐个测试节点，实时更新结果
+      for (final node in state.nodes) {
+        if (!state.isTesting) break; // 允许中断测试
+
+        final latency = await ProxyCore.instance.testLatency(node);
+        final newLatencies = Map<String, int?>.from(state.latencies);
+        newLatencies[node.id] = latency; // null 或 -1 表示超时/失败
+        state = state.copyWith(latencies: newLatencies);
+      }
     } catch (e) {
       VortexLogger.e('Failed to test latencies', e);
+    } finally {
       state = state.copyWith(isTesting: false);
     }
+  }
+
+  /// 停止测速
+  void stopTesting() {
+    state = state.copyWith(isTesting: false);
   }
 
   /// 测试单个节点延迟

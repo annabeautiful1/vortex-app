@@ -44,33 +44,21 @@ class NodesPage extends ConsumerWidget {
                   ),
                   Row(
                     children: [
-                      // 测速按钮 - 显示测速状态
-                      nodesState.isTesting
-                          ? const SizedBox(
-                              width: 48,
-                              height: 48,
-                              child: Padding(
-                                padding: EdgeInsets.all(12),
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            )
-                          : IconButton(
-                              onPressed: () {
-                                ref
-                                    .read(nodesProvider.notifier)
-                                    .testAllLatencies();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('正在测试节点延迟...'),
-                                    duration: Duration(seconds: 1),
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.speed),
-                              tooltip: '测速全部',
-                            ),
+                      // 测速按钮 - 测速中时可点击停止
+                      IconButton(
+                        onPressed: () {
+                          if (nodesState.isTesting) {
+                            ref.read(nodesProvider.notifier).stopTesting();
+                          } else {
+                            ref.read(nodesProvider.notifier).testAllLatencies();
+                          }
+                        },
+                        icon: Icon(
+                          nodesState.isTesting ? Icons.stop : Icons.speed,
+                          color: nodesState.isTesting ? Colors.orange : null,
+                        ),
+                        tooltip: nodesState.isTesting ? '停止测速' : '测速全部',
+                      ),
                       IconButton(
                         onPressed: () async {
                           final authState = ref.read(authProvider);
@@ -185,6 +173,8 @@ class NodesPage extends ConsumerWidget {
                 node: node,
                 isConnected: connectionState.connectedNode?.id == node.id,
                 latency: nodesState.latencies[node.id],
+                isTesting: nodesState.isTesting,
+                hasTested: nodesState.latencies.containsKey(node.id),
                 onTap: () {
                   ref.read(connectionProvider.notifier).switchNode(node);
                 },
@@ -202,12 +192,16 @@ class _NodeTile extends StatelessWidget {
   final ProxyNode node;
   final bool isConnected;
   final int? latency;
+  final bool isTesting; // 是否正在批量测速
+  final bool hasTested; // 该节点是否已测试完成
   final VoidCallback onTap;
 
   const _NodeTile({
     required this.node,
     required this.isConnected,
     this.latency,
+    this.isTesting = false,
+    this.hasTested = false,
     required this.onTap,
   });
 
@@ -256,17 +250,46 @@ class _NodeTile extends StatelessWidget {
           '${node.protocol.name.toUpperCase()} · ${node.server}',
           style: Theme.of(context).textTheme.bodySmall,
         ),
-        trailing: latency != null
-            ? Text(
-                '$latency ms',
-                style: TextStyle(
-                  color: _getLatencyColor(latency!),
-                  fontWeight: FontWeight.w600,
-                ),
-              )
-            : const Icon(Icons.chevron_right),
+        trailing: _buildLatencyWidget(),
       ),
     );
+  }
+
+  /// 构建延迟显示组件
+  Widget _buildLatencyWidget() {
+    // 已测试完成 - 显示延迟或超时
+    if (hasTested) {
+      if (latency != null && latency! > 0) {
+        return Text(
+          '$latency ms',
+          style: TextStyle(
+            color: _getLatencyColor(latency!),
+            fontWeight: FontWeight.w600,
+          ),
+        );
+      } else {
+        // 超时或失败
+        return const Text(
+          '超时',
+          style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
+        );
+      }
+    }
+
+    // 正在测速但还没轮到这个节点 - 显示等待中的小图标
+    if (isTesting) {
+      return SizedBox(
+        width: 16,
+        height: 16,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: Colors.grey.shade400,
+        ),
+      );
+    }
+
+    // 未测试 - 显示箭头
+    return const Icon(Icons.chevron_right);
   }
 
   String _getTagLabel(NodeTag tag) {
