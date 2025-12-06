@@ -199,26 +199,36 @@ class ConnectionNotifier extends StateNotifier<VpnConnectionState> {
     state = state.copyWith(status: ConnectionStatus.disconnecting);
 
     try {
-      final success = await _vpnService.disconnect();
+      // 添加总超时保护，防止 UI 卡死
+      final success = await _vpnService.disconnect().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          VortexLogger.w('Disconnect operation timed out');
+          return false;
+        },
+      );
+
+      // 无论成功与否都更新状态，避免卡死
+      state = state.copyWith(
+        status: ConnectionStatus.disconnected,
+        clearNode: true,
+        trafficStats: const _EmptyTrafficStats(),
+        clearError: true,
+      );
 
       if (success) {
-        state = state.copyWith(
-          status: ConnectionStatus.disconnected,
-          clearNode: true,
-          trafficStats: const _EmptyTrafficStats(),
-        );
         VortexLogger.i('Disconnected');
       } else {
-        state = state.copyWith(
-          status: ConnectionStatus.connected,
-          error: '断开连接失败',
-        );
+        VortexLogger.w('Disconnect completed with warnings');
       }
     } catch (e) {
       VortexLogger.e('Disconnect failed', e);
+      // 即使出错也要恢复到断开状态，避免卡死
       state = state.copyWith(
-        status: ConnectionStatus.connected,
-        error: e.toString(),
+        status: ConnectionStatus.disconnected,
+        clearNode: true,
+        trafficStats: const _EmptyTrafficStats(),
+        error: '断开连接时出错: ${e.toString()}',
       );
     }
   }

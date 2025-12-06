@@ -11,6 +11,7 @@ class NodesState {
   final List<ProxyNode> nodes;
   final Map<String, int?> latencies;
   final bool isLoading;
+  final bool isTesting; // 测速中状态（区别于加载节点）
   final String? error;
   final String? subscribeUrl;
 
@@ -18,6 +19,7 @@ class NodesState {
     this.nodes = const [],
     this.latencies = const {},
     this.isLoading = false,
+    this.isTesting = false,
     this.error,
     this.subscribeUrl,
   });
@@ -26,6 +28,7 @@ class NodesState {
     List<ProxyNode>? nodes,
     Map<String, int?>? latencies,
     bool? isLoading,
+    bool? isTesting,
     String? error,
     String? subscribeUrl,
   }) {
@@ -33,6 +36,7 @@ class NodesState {
       nodes: nodes ?? this.nodes,
       latencies: latencies ?? this.latencies,
       isLoading: isLoading ?? this.isLoading,
+      isTesting: isTesting ?? this.isTesting,
       error: error,
       subscribeUrl: subscribeUrl ?? this.subscribeUrl,
     );
@@ -140,11 +144,15 @@ class NodesNotifier extends StateNotifier<NodesState> {
 
   /// 测试所有节点延迟
   Future<void> testAllLatencies() async {
-    state = state.copyWith(isLoading: true);
+    state = state.copyWith(isTesting: true);
 
-    final latencies = await ProxyCore.instance.testAllLatencies(state.nodes);
-
-    state = state.copyWith(latencies: latencies, isLoading: false);
+    try {
+      final latencies = await ProxyCore.instance.testAllLatencies(state.nodes);
+      state = state.copyWith(latencies: latencies, isTesting: false);
+    } catch (e) {
+      VortexLogger.e('Failed to test latencies', e);
+      state = state.copyWith(isTesting: false);
+    }
   }
 
   /// 测试单个节点延迟

@@ -44,12 +44,33 @@ class NodesPage extends ConsumerWidget {
                   ),
                   Row(
                     children: [
-                      IconButton(
-                        onPressed: () =>
-                            ref.read(nodesProvider.notifier).testAllLatencies(),
-                        icon: const Icon(Icons.speed),
-                        tooltip: '测速全部',
-                      ),
+                      // 测速按钮 - 显示测速状态
+                      nodesState.isTesting
+                          ? const SizedBox(
+                              width: 48,
+                              height: 48,
+                              child: Padding(
+                                padding: EdgeInsets.all(12),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            )
+                          : IconButton(
+                              onPressed: () {
+                                ref
+                                    .read(nodesProvider.notifier)
+                                    .testAllLatencies();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('正在测试节点延迟...'),
+                                    duration: Duration(seconds: 1),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.speed),
+                              tooltip: '测速全部',
+                            ),
                       IconButton(
                         onPressed: () async {
                           final authState = ref.read(authProvider);

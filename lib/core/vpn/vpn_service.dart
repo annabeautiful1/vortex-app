@@ -143,16 +143,38 @@ class VpnService {
     try {
       VortexLogger.i('Disconnecting...');
 
-      // 停止 VPN 服务
-      if (_tunEnabled && (Platform.isAndroid || Platform.isIOS)) {
-        await _platformChannel.stopVpn();
-      }
+      // 使用超时保护，防止卡死
+      await Future.wait([
+        // 停止 VPN 服务
+        if (_tunEnabled && (Platform.isAndroid || Platform.isIOS))
+          _platformChannel.stopVpn().timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              VortexLogger.w('stopVpn timed out');
+              return;
+            },
+          ),
 
-      // 关闭系统代理
-      await _platformChannel.setSystemProxy(false);
+        // 关闭系统代理
+        _platformChannel
+            .setSystemProxy(false)
+            .timeout(
+              const Duration(seconds: 3),
+              onTimeout: () {
+                VortexLogger.w('setSystemProxy(false) timed out');
+                return;
+              },
+            ),
 
-      // 停止核心
-      await _platformChannel.stopCore();
+        // 停止核心
+        _platformChannel.stopCore().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            VortexLogger.w('stopCore timed out');
+            return;
+          },
+        ),
+      ]);
 
       _currentNode = null;
       _currentConfigPath = null;
@@ -161,6 +183,9 @@ class VpnService {
       return true;
     } catch (e) {
       VortexLogger.e('Disconnect failed', e);
+      // 即使出错也要清理状态
+      _currentNode = null;
+      _currentConfigPath = null;
       return false;
     }
   }
@@ -176,9 +201,13 @@ class VpnService {
 
       // 如果核心正在运行，使用热切换
       if (isConnected) {
-        // 通过 Mihomo API 切换代理
+        // 1. 通过 Mihomo API 切换代理组中的节点
         final success = await _mihomoService.selectProxy('Proxy', node.name);
         if (success) {
+          // 2. 关闭现有的所有连接，强制使用新节点建立新连接
+          await _mihomoService.closeAllConnections();
+          VortexLogger.i('Closed all existing connections');
+
           _currentNode = node;
           VortexLogger.i('Switched to ${node.name} via API');
           return true;

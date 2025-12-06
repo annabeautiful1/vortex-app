@@ -234,7 +234,16 @@ class PlatformChannelService {
       _currentState = VpnState.disconnecting;
       _stateController.add(_currentState);
 
-      final result = await _channel.invokeMethod('stopCore');
+      // 添加超时保护，防止原生代码卡住导致 UI 卡死
+      final result = await _channel
+          .invokeMethod('stopCore')
+          .timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              VortexLogger.w('stopCore native call timed out');
+              return true; // 假设成功，让 UI 继续
+            },
+          );
 
       if (result == true) {
         _currentState = VpnState.disconnected;
@@ -247,6 +256,9 @@ class PlatformChannelService {
       return false;
     } on PlatformException catch (e) {
       VortexLogger.e('Failed to stop core: ${e.message}');
+      // 即使失败也更新状态，防止卡死
+      _currentState = VpnState.disconnected;
+      _stateController.add(_currentState);
       return false;
     }
   }
@@ -287,7 +299,16 @@ class PlatformChannelService {
   /// 停止 VPN 服务
   Future<bool> stopVpn() async {
     try {
-      final result = await _channel.invokeMethod('stopVpn');
+      // 添加超时保护
+      final result = await _channel
+          .invokeMethod('stopVpn')
+          .timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              VortexLogger.w('stopVpn native call timed out');
+              return true;
+            },
+          );
       return result == true;
     } on PlatformException catch (e) {
       VortexLogger.e('Failed to stop VPN: ${e.message}');
@@ -298,11 +319,20 @@ class PlatformChannelService {
   /// 设置系统代理
   Future<bool> setSystemProxy(bool enable, {int port = 7890}) async {
     try {
-      final result = await _channel.invokeMethod('setSystemProxy', {
-        'enable': enable,
-        'host': '127.0.0.1',
-        'port': port,
-      });
+      // 添加超时保护
+      final result = await _channel
+          .invokeMethod('setSystemProxy', {
+            'enable': enable,
+            'host': '127.0.0.1',
+            'port': port,
+          })
+          .timeout(
+            const Duration(seconds: 3),
+            onTimeout: () {
+              VortexLogger.w('setSystemProxy native call timed out');
+              return true; // 假设成功
+            },
+          );
       VortexLogger.i(
         'System proxy ${enable ? 'enabled' : 'disabled'} on port $port',
       );
