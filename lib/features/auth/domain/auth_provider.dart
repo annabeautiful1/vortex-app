@@ -133,26 +133,52 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final config = BuildConfig.instance;
 
       // Set panel type from build config
-      final buildPanelType = config.isV2board
-          ? PanelType.v2board
-          : PanelType.sspanel;
+      final buildPanelType =
+          config.isV2board ? PanelType.v2board : PanelType.sspanel;
       state = state.copyWith(panelType: buildPanelType);
+
+      VortexLogger.i('AuthNotifier: Panel type set to ${buildPanelType.name}');
 
       // If we have API endpoints in config, use the first available one
       if (config.hasApiEndpoints) {
-        final baseUrl = await ApiManager.instance.getActiveEndpointUrl();
+        VortexLogger.i('AuthNotifier: Looking for active API endpoint...');
+
+        // 添加超时保护，避免卡死
+        String? baseUrl;
+        try {
+          baseUrl = await ApiManager.instance
+              .getActiveEndpointUrl()
+              .timeout(
+                const Duration(seconds: 15),
+                onTimeout: () {
+                  VortexLogger.w('AuthNotifier: API endpoint polling timed out');
+                  return null;
+                },
+              );
+        } catch (e) {
+          VortexLogger.e('AuthNotifier: Failed to get active endpoint', e);
+        }
+
         if (baseUrl != null) {
+          VortexLogger.i('AuthNotifier: Found active endpoint: $baseUrl');
           state = state.copyWith(baseUrl: baseUrl);
           await _initApiClient(baseUrl, buildPanelType);
+        } else {
+          VortexLogger.w('AuthNotifier: No active API endpoint found');
         }
+      } else {
+        VortexLogger.i('AuthNotifier: No API endpoints configured');
       }
 
       // Then check for stored session
+      VortexLogger.i('AuthNotifier: Checking stored session...');
       await _checkStoredSession();
+      VortexLogger.i('AuthNotifier: Session check completed');
     } catch (e) {
       VortexLogger.e('Failed to initialize from build config', e);
     } finally {
       _isInitialized = true;
+      VortexLogger.i('AuthNotifier: Initialization complete, isAuthenticated=${state.isAuthenticated}');
       if (!state.isAuthenticated) {
         state = state.copyWith(isLoading: false);
       }

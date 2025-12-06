@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'shared/themes/app_theme.dart';
 import 'core/config/build_config.dart';
 import 'core/utils/logger.dart';
+import 'core/utils/dev_mode.dart';
 import 'features/auth/domain/auth_provider.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/dashboard/presentation/pages/dashboard_page.dart';
@@ -13,6 +14,7 @@ import 'features/nodes/domain/nodes_provider.dart';
 import 'features/dashboard/domain/connection_provider.dart';
 import 'features/settings/presentation/pages/settings_page.dart';
 import 'features/support/presentation/pages/support_page.dart';
+import 'features/debug/presentation/pages/debug_panel.dart';
 
 /// 创建路由，接受 WidgetRef 用于监听认证状态
 GoRouter _createRouter(WidgetRef ref) {
@@ -138,41 +140,112 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen> {
+  String _statusText = '正在加载...';
+  bool _hasError = false;
+  String? _errorMessage;
+
+  // 开发者模式触发
+  int _logoTapCount = 0;
+  DateTime? _lastLogoTap;
+
   @override
   void initState() {
     super.initState();
     _initializeApp();
   }
 
+  /// 处理 Logo 点击，连续点击 5 次打开调试面板
+  void _handleLogoTap() {
+    final now = DateTime.now();
+
+    // 如果超过 2 秒没有点击，重置计数
+    if (_lastLogoTap != null && now.difference(_lastLogoTap!).inSeconds > 2) {
+      _logoTapCount = 0;
+    }
+
+    _lastLogoTap = now;
+    _logoTapCount++;
+
+    VortexLogger.i('SplashScreen: Logo tapped $_logoTapCount times');
+
+    if (_logoTapCount >= 5) {
+      _logoTapCount = 0;
+      _openDebugPanel();
+    }
+  }
+
+  /// 打开调试面板
+  void _openDebugPanel() {
+    VortexLogger.i('SplashScreen: Opening debug panel');
+    DevMode.instance.enable();
+
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const DebugPanel()),
+    );
+  }
+
   Future<void> _initializeApp() async {
     VortexLogger.i('SplashScreen: Starting initialization...');
 
-    // 等待 AuthNotifier 完成初始化（最多 10 秒）
-    final authNotifier = ref.read(authProvider.notifier);
-    int waitCount = 0;
-    const maxWait = 100; // 10 seconds (100 * 100ms)
+    try {
+      _updateStatus('正在检查登录状态...');
 
-    while (!authNotifier.isInitialized && waitCount < maxWait) {
+      // 等待 AuthNotifier 完成初始化（最多 10 秒）
+      final authNotifier = ref.read(authProvider.notifier);
+      int waitCount = 0;
+      const maxWait = 100; // 10 seconds (100 * 100ms)
+
+      while (!authNotifier.isInitialized && waitCount < maxWait) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        waitCount++;
+
+        // 每秒更新一次状态
+        if (waitCount % 10 == 0) {
+          _updateStatus('正在连接服务器... (${waitCount ~/ 10}s)');
+        }
+      }
+
+      VortexLogger.i(
+        'SplashScreen: Auth initialization completed (waited ${waitCount * 100}ms)',
+      );
+
+      // 检查是否超时
+      if (!authNotifier.isInitialized) {
+        VortexLogger.w('SplashScreen: Auth initialization timed out');
+        _updateStatus('连接超时，请检查网络');
+      }
+
+      // 如果已登录，加载节点列表
+      final authState = ref.read(authProvider);
+      VortexLogger.i(
+        'SplashScreen: Auth state - isAuthenticated=${authState.isAuthenticated}, isLoading=${authState.isLoading}',
+      );
+
+      if (authState.isAuthenticated) {
+        _updateStatus('正在加载节点列表...');
+        await _loadNodesIfLoggedIn();
+      }
+
+      // 额外等待一下让路由刷新
       await Future.delayed(const Duration(milliseconds: 100));
-      waitCount++;
+    } catch (e, stack) {
+      VortexLogger.e('SplashScreen: Initialization error', e, stack);
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = e.toString();
+        });
+      }
     }
+  }
 
-    VortexLogger.i(
-      'SplashScreen: Auth initialization completed (waited ${waitCount * 100}ms)',
-    );
-
-    // 如果已登录，加载节点列表
-    final authState = ref.read(authProvider);
-    VortexLogger.i(
-      'SplashScreen: Auth state - isAuthenticated=${authState.isAuthenticated}, isLoading=${authState.isLoading}',
-    );
-
-    if (authState.isAuthenticated) {
-      await _loadNodesIfLoggedIn();
+  void _updateStatus(String status) {
+    VortexLogger.i('SplashScreen: $status');
+    if (mounted) {
+      setState(() {
+        _statusText = status;
+      });
     }
-
-    // 额外等待一下让路由刷新
-    await Future.delayed(const Duration(milliseconds: 100));
   }
 
   Future<void> _loadNodesIfLoggedIn() async {
@@ -209,19 +282,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Logo
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+            // Logo - 点击 5 次打开调试面板
+            GestureDetector(
+              onTap: _handleLogoTap,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+                  ),
+                  borderRadius: BorderRadius.circular(25),
                 ),
-                borderRadius: BorderRadius.circular(25),
+                child: const Icon(Icons.cyclone, size: 60, color: Colors.white),
               ),
-              child: const Icon(Icons.cyclone, size: 60, color: Colors.white),
             ),
             const SizedBox(height: 24),
             Text(
@@ -238,14 +314,40 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               ),
             ),
             const SizedBox(height: 48),
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text(
-              '正在加载...',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+            if (_hasError) ...[
+              Icon(
+                Icons.error_outline,
+                size: 48,
+                color: Theme.of(context).colorScheme.error,
               ),
-            ),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage ?? '未知错误',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _hasError = false;
+                    _errorMessage = null;
+                    _statusText = '正在加载...';
+                  });
+                  _initializeApp();
+                },
+                child: const Text('重试'),
+              ),
+            ] else ...[
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                _statusText,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ],
         ),
       ),
