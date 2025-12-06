@@ -41,14 +41,16 @@ class _SupportPageState extends ConsumerState<SupportPage> {
     }
 
     // 获取带用户信息的聊天 URL
-    final chatUrl = ref.read(supportProvider.notifier).getChatUrlWithUserInfo(
-      email: authState.user?.email,
-      nickname: authState.user?.username,
-      userData: {
-        'plan': authState.user?.subscription.planName ?? '未知',
-        'expire': authState.user?.subscription.expireAt.toString() ?? '未知',
-      },
-    );
+    final chatUrl = ref
+        .read(supportProvider.notifier)
+        .getChatUrlWithUserInfo(
+          email: authState.user?.email,
+          nickname: authState.user?.username,
+          userData: {
+            'plan': authState.user?.subscription.planName ?? '未知',
+            'expire': authState.user?.subscription.expireAt.toString() ?? '未知',
+          },
+        );
 
     if (chatUrl == null) return;
 
@@ -102,9 +104,7 @@ class _SupportPageState extends ConsumerState<SupportPage> {
             _buildHeader(context, supportState),
 
             // Content
-            Expanded(
-              child: _buildContent(context, supportState),
-            ),
+            Expanded(child: _buildContent(context, supportState)),
           ],
         ),
       ),
@@ -118,9 +118,7 @@ class _SupportPageState extends ConsumerState<SupportPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(color: theme.dividerColor),
-        ),
+        border: Border(bottom: BorderSide(color: theme.dividerColor)),
       ),
       child: Row(
         children: [
@@ -131,10 +129,7 @@ class _SupportPageState extends ConsumerState<SupportPage> {
               color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              Icons.support_agent,
-              color: AppTheme.primaryColor,
-            ),
+            child: Icon(Icons.support_agent, color: AppTheme.primaryColor),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -143,8 +138,9 @@ class _SupportPageState extends ConsumerState<SupportPage> {
               children: [
                 Text(
                   '在线客服',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 Row(
                   children: [
@@ -163,8 +159,8 @@ class _SupportPageState extends ConsumerState<SupportPage> {
                       supportState.isLoading
                           ? '检查中...'
                           : supportState.isOnline
-                              ? '在线'
-                              : '离线',
+                          ? '在线'
+                          : '离线',
                       style: theme.textTheme.bodySmall,
                     ),
                   ],
@@ -207,8 +203,7 @@ class _SupportPageState extends ConsumerState<SupportPage> {
       children: [
         if (_webViewController != null)
           WebViewWidget(controller: _webViewController!),
-        if (_isWebViewLoading)
-          const Center(child: CircularProgressIndicator()),
+        if (_isWebViewLoading) const Center(child: CircularProgressIndicator()),
       ],
     );
   }
@@ -226,18 +221,16 @@ class _SupportPageState extends ConsumerState<SupportPage> {
           const SizedBox(height: 16),
           Text(
             '客服系统未配置',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(color: Colors.grey.shade600),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
             '请联系管理员配置 Crisp 客服系统',
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: Colors.grey.shade500),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade500),
           ),
           const SizedBox(height: 24),
           // 显示 Telegram 链接（如果有）
@@ -254,7 +247,10 @@ class _SupportPageState extends ConsumerState<SupportPage> {
     );
   }
 
-  Widget _buildDesktopFallback(BuildContext context, SupportState supportState) {
+  Widget _buildDesktopFallback(
+    BuildContext context,
+    SupportState supportState,
+  ) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -267,10 +263,9 @@ class _SupportPageState extends ConsumerState<SupportPage> {
           const SizedBox(height: 16),
           Text(
             supportState.welcomeMessage,
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(color: Colors.grey.shade600),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),

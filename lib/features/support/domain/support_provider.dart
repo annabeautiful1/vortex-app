@@ -52,10 +52,7 @@ class SupportNotifier extends StateNotifier<SupportState> {
 
     // 检查是否配置了 Crisp
     if (!config.hasCrisp) {
-      state = state.copyWith(
-        isLoading: false,
-        isConfigured: false,
-      );
+      state = state.copyWith(isLoading: false, isConfigured: false);
       VortexLogger.w('Crisp not configured');
       return;
     }
@@ -87,7 +84,9 @@ class SupportNotifier extends StateNotifier<SupportState> {
   }
 
   void _onOperatorStatusChanged() {
-    state = state.copyWith(isOnline: CrispService.instance.operatorOnline.value);
+    state = state.copyWith(
+      isOnline: CrispService.instance.operatorOnline.value,
+    );
   }
 
   /// 检查客服在线状态
@@ -118,7 +117,9 @@ class SupportNotifier extends StateNotifier<SupportState> {
   @override
   void dispose() {
     _statusTimer?.cancel();
-    CrispService.instance.operatorOnline.removeListener(_onOperatorStatusChanged);
+    CrispService.instance.operatorOnline.removeListener(
+      _onOperatorStatusChanged,
+    );
     super.dispose();
   }
 }

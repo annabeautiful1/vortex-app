@@ -155,10 +155,7 @@ class _AnnouncementDialogState extends State<_AnnouncementDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('关闭'),
         ),
-        TextButton(
-          onPressed: _loadNotices,
-          child: const Text('刷新'),
-        ),
+        TextButton(onPressed: _loadNotices, child: const Text('刷新')),
       ],
     );
   }
@@ -199,11 +196,7 @@ class _AnnouncementDialogState extends State<_AnnouncementDialog> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.inbox_outlined,
-              size: 48,
-              color: Colors.grey.shade400,
-            ),
+            Icon(Icons.inbox_outlined, size: 48, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text(
               '暂无公告',
@@ -315,9 +308,7 @@ class _NoticeItem extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title.isNotEmpty ? title : '公告详情'),
-        content: SingleChildScrollView(
-          child: Text(_stripHtml(content)),
-        ),
+        content: SingleChildScrollView(child: Text(_stripHtml(content))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
