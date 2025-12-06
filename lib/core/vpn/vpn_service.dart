@@ -143,20 +143,25 @@ class VpnService {
     try {
       VortexLogger.i('Disconnecting...');
 
-      // 使用超时保护，防止卡死
-      await Future.wait([
-        // 停止 VPN 服务
-        if (_tunEnabled && (Platform.isAndroid || Platform.isIOS))
-          _platformChannel.stopVpn().timeout(
-            const Duration(seconds: 5),
+      // 顺序执行而不是并行，每一步都有超时保护
+      // 1. 停止 VPN 服务 (移动端)
+      if (_tunEnabled && (Platform.isAndroid || Platform.isIOS)) {
+        try {
+          await _platformChannel.stopVpn().timeout(
+            const Duration(seconds: 3),
             onTimeout: () {
               VortexLogger.w('stopVpn timed out');
               return false;
             },
-          ),
+          );
+        } catch (e) {
+          VortexLogger.w('stopVpn error: $e');
+        }
+      }
 
-        // 关闭系统代理
-        _platformChannel
+      // 2. 关闭系统代理
+      try {
+        await _platformChannel
             .setSystemProxy(false)
             .timeout(
               const Duration(seconds: 3),
@@ -164,17 +169,23 @@ class VpnService {
                 VortexLogger.w('setSystemProxy(false) timed out');
                 return false;
               },
-            ),
+            );
+      } catch (e) {
+        VortexLogger.w('setSystemProxy error: $e');
+      }
 
-        // 停止核心
-        _platformChannel.stopCore().timeout(
+      // 3. 停止核心
+      try {
+        await _platformChannel.stopCore().timeout(
           const Duration(seconds: 5),
           onTimeout: () {
             VortexLogger.w('stopCore timed out');
             return false;
           },
-        ),
-      ]);
+        );
+      } catch (e) {
+        VortexLogger.w('stopCore error: $e');
+      }
 
       _currentNode = null;
       _currentConfigPath = null;

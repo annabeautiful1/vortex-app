@@ -260,6 +260,12 @@ class PlatformChannelService {
       _currentState = VpnState.disconnected;
       _stateController.add(_currentState);
       return false;
+    } catch (e) {
+      // 捕获所有其他异常（包括 TimeoutException）
+      VortexLogger.e('stopCore exception: $e');
+      _currentState = VpnState.disconnected;
+      _stateController.add(_currentState);
+      return false;
     }
   }
 
@@ -339,6 +345,10 @@ class PlatformChannelService {
       return result == true;
     } on PlatformException catch (e) {
       VortexLogger.e('Failed to set system proxy: ${e.message}');
+      return false;
+    } catch (e) {
+      // 捕获所有其他异常（包括 TimeoutException）
+      VortexLogger.e('setSystemProxy exception: $e');
       return false;
     }
   }

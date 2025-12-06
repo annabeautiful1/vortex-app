@@ -13,9 +13,12 @@ class ConnectionButton extends ConsumerWidget {
     final connectionState = ref.watch(connectionProvider);
     final isConnected = connectionState.status == ConnectionStatus.connected;
     final isConnecting = connectionState.status == ConnectionStatus.connecting;
+    final isDisconnecting =
+        connectionState.status == ConnectionStatus.disconnecting;
+    final isProcessing = isConnecting || isDisconnecting;
 
     return GestureDetector(
-      onTap: isConnecting
+      onTap: isProcessing
           ? null
           : () {
               if (isConnected) {
@@ -39,7 +42,7 @@ class ConnectionButton extends ConsumerWidget {
                             AppTheme.connectedColor,
                             AppTheme.connectedColor.withValues(alpha: 0.7),
                           ]
-                        : isConnecting
+                        : isProcessing
                         ? [
                             AppTheme.connectingColor,
                             AppTheme.connectingColor.withValues(alpha: 0.7),
@@ -51,7 +54,7 @@ class ConnectionButton extends ConsumerWidget {
                       color:
                           (isConnected
                                   ? AppTheme.connectedColor
-                                  : isConnecting
+                                  : isProcessing
                                   ? AppTheme.connectingColor
                                   : Colors.grey)
                               .withValues(alpha: 0.4),
@@ -63,7 +66,7 @@ class ConnectionButton extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    if (isConnecting)
+                    if (isProcessing)
                       const SizedBox(
                         width: 48,
                         height: 48,
@@ -86,6 +89,8 @@ class ConnectionButton extends ConsumerWidget {
                           ? '已连接'
                           : isConnecting
                           ? '连接中...'
+                          : isDisconnecting
+                          ? '断开中...'
                           : '未连接',
                       style: const TextStyle(
                         color: Colors.white,
@@ -93,7 +98,8 @@ class ConnectionButton extends ConsumerWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    if (connectionState.connectedNode != null) ...[
+                    if (connectionState.connectedNode != null &&
+                        !isDisconnecting) ...[
                       const SizedBox(height: 4),
                       Text(
                         connectionState.connectedNode!.name,
@@ -110,10 +116,10 @@ class ConnectionButton extends ConsumerWidget {
               )
               .animate(
                 onPlay: (controller) =>
-                    isConnecting ? controller.repeat() : null,
+                    isProcessing ? controller.repeat() : null,
               )
               .shimmer(
-                duration: isConnecting
+                duration: isProcessing
                     ? const Duration(seconds: 2)
                     : Duration.zero,
                 color: Colors.white.withValues(alpha: 0.3),
