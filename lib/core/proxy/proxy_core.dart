@@ -139,14 +139,16 @@ class ProxyCore {
   ///
   /// 这个方法测量的是通过代理访问目标 URL 的完整延迟，包括：
   /// - DNS 解析
-  /// - TCP 连接建立
+  /// - TCP 连接建立（包括中转服务器链路）
   /// - TLS 握手（如果使用 HTTPS）
   /// - HTTP 请求/响应
   ///
-  /// 参考 clash verge rev 的实现方式
+  /// 参考 Clash for Windows, Clash Verge Rev, FlClash 的实现方式
+  /// 真实延迟 = 用户设备 → 中转服务器(可选) → 落地服务器 → 测试URL
   Future<int?> testLatency(ProxyNode node) async {
     try {
-      // 优先使用 Mihomo API 测试真实代理延迟
+      // 直接使用 Mihomo API 测试真实代理延迟
+      // MihomoService 会处理核心未运行的情况
       final mihomoDelay = await MihomoService.instance.testProxyDelay(
         node.name,
         url: MihomoService.defaultDelayTestUrl,
@@ -158,20 +160,20 @@ class ProxyCore {
         return mihomoDelay;
       }
 
-      // 如果 Mihomo API 失败，回退到直接 TCP 测试（仅测试连接性）
-      VortexLogger.d(
-        'Mihomo API failed, falling back to TCP test for ${node.name}',
-      );
-      return await _testDirectTcpLatency(node);
+      // 如果 API 返回 null 或 0，说明测试失败或节点不可用
+      VortexLogger.d('Delay test returned null/0 for ${node.name}');
+      return null;
     } catch (e) {
       VortexLogger.w('Latency test failed for ${node.name}: $e');
       return null;
     }
   }
 
-  /// 直接 TCP 连接测试（回退方案）
+  /// 直接 TCP 连接测试（仅用于连通性检测，不反映真实延迟）
   /// 注意：这只测试到代理服务器的 TCP 连接时间，不是真实的代理延迟
-  Future<int?> _testDirectTcpLatency(ProxyNode node) async {
+  /// 已弃用：请使用 testLatency() 获取真实延迟
+  @Deprecated('Use testLatency() for real proxy delay')
+  Future<int?> testTcpConnectivity(ProxyNode node) async {
     try {
       final stopwatch = Stopwatch()..start();
 
@@ -194,6 +196,8 @@ class ProxyCore {
   /// 批量测试所有节点延迟 - 使用 Mihomo API
   ///
   /// 优先使用 Mihomo 的批量测试 API，效率更高
+  /// 注意：此方法需要 Mihomo 核心运行中，否则返回空结果
+  /// 推荐使用 VpnService.testAllNodesDelay() 获取更可靠的结果
   Future<Map<String, int?>> testAllLatencies(List<ProxyNode> nodes) async {
     final results = <String, int?>{};
 
@@ -202,7 +206,7 @@ class ProxyCore {
     // 获取所有节点名称
     final nodeNames = nodes.map((n) => n.name).toList();
 
-    // 尝试使用 Mihomo API 批量测试
+    // 使用 Mihomo API 批量测试
     try {
       final mihomoResults = await MihomoService.instance.testMultipleProxyDelay(
         nodeNames,
@@ -221,22 +225,10 @@ class ProxyCore {
       );
       return results;
     } catch (e) {
-      VortexLogger.w('Mihomo batch test failed, using direct TCP test: $e');
+      VortexLogger.w('Mihomo batch test failed: $e');
+      // 如果 API 失败，返回空结果（不再使用不准确的 TCP 测试）
+      return results;
     }
-
-    // 回退到直接 TCP 测试
-    const batchSize = 10;
-    for (var i = 0; i < nodes.length; i += batchSize) {
-      final batch = nodes.skip(i).take(batchSize);
-      final futures = batch.map((node) async {
-        final latency = await _testDirectTcpLatency(node);
-        return MapEntry(node.id, latency);
-      });
-      final batchResults = await Future.wait(futures);
-      results.addEntries(batchResults);
-    }
-
-    return results;
   }
 
   Map<String, dynamic> _generateConfig(ProxyNode node) {

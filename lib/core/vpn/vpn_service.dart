@@ -249,9 +249,14 @@ class VpnService {
     }
   }
 
-  /// 测试节点延迟
-  Future<int> testNodeDelay(ProxyNode node, {int timeout = 5000}) async {
-    // 如果核心运行中，使用 API 测试
+  /// 测试节点延迟 - 真实全链路延迟
+  ///
+  /// 通过 Mihomo API 测试代理延迟，流量经过完整链路：
+  /// 用户设备 → 中转服务器(可选) → 落地服务器 → 测试URL
+  ///
+  /// 如果核心未运行，会临时启动核心进行测试
+  Future<int> testNodeDelay(ProxyNode node, {int timeout = 10000}) async {
+    // 如果核心运行中，直接使用 API 测试
     if (isConnected) {
       final delay = await _mihomoService.testProxyDelay(
         node.name,
@@ -260,53 +265,250 @@ class VpnService {
       return delay ?? -1;
     }
 
-    // 否则直接 TCP 连接测试
-    try {
-      final stopwatch = Stopwatch()..start();
-      final socket = await Socket.connect(
-        node.server,
-        node.port,
-        timeout: Duration(milliseconds: timeout),
+    // 核心未运行，需要临时启动进行测试
+    return await _testDelayWithTempCore(node, timeout: timeout);
+  }
+
+  /// 临时启动核心测试延迟
+  bool _isTempCoreRunning = false;
+
+  Future<int> _testDelayWithTempCore(
+    ProxyNode node, {
+    int timeout = 10000,
+  }) async {
+    // 如果已经有临时核心在运行，直接测试
+    if (_isTempCoreRunning) {
+      final delay = await _mihomoService.testProxyDelay(
+        node.name,
+        timeout: timeout,
       );
-      await socket.close();
-      stopwatch.stop();
-      return stopwatch.elapsedMilliseconds;
+      return delay ?? -1;
+    }
+
+    // 没有节点，无法测试
+    if (_nodes.isEmpty && node.id.isEmpty) {
+      VortexLogger.w('No nodes available for delay test');
+      return -1;
+    }
+
+    try {
+      VortexLogger.i('Starting temp core for delay test...');
+      _isTempCoreRunning = true;
+
+      // 生成包含所有节点的临时配置
+      final configPath = await _writeDelayTestConfig();
+
+      // 启动核心
+      final started = await _platformChannel.startCore(configPath);
+      if (!started) {
+        VortexLogger.w('Failed to start temp core for delay test');
+        _isTempCoreRunning = false;
+        return -1;
+      }
+
+      // 等待核心启动完成
+      await Future.delayed(const Duration(milliseconds: 1500));
+
+      // 验证核心已启动
+      final isHealthy = await _mihomoService.healthCheck();
+      if (!isHealthy) {
+        VortexLogger.w('Temp core health check failed');
+        await _platformChannel.stopCore();
+        _isTempCoreRunning = false;
+        return -1;
+      }
+
+      // 测试延迟
+      final delay = await _mihomoService.testProxyDelay(
+        node.name,
+        timeout: timeout,
+      );
+
+      return delay ?? -1;
     } catch (e) {
+      VortexLogger.e('Delay test with temp core failed', e);
       return -1;
     }
   }
 
-  /// 测试所有节点延迟
-  Future<Map<String, int>> testAllNodesDelay({int timeout = 5000}) async {
+  /// 停止临时核心（测试完成后调用）
+  Future<void> stopTempCoreIfRunning() async {
+    if (_isTempCoreRunning && !isConnected) {
+      VortexLogger.i('Stopping temp core...');
+      await _platformChannel.stopCore();
+      _isTempCoreRunning = false;
+    }
+  }
+
+  /// 生成用于延迟测试的配置（不启用系统代理）
+  Future<String> _writeDelayTestConfig() async {
+    final configDir = await _ensureConfigDirectory();
+    final configPath = '$configDir/delay_test_config.yaml';
+
+    final buffer = StringBuffer();
+
+    // 基础配置
+    buffer.writeln('# Vortex Delay Test Config');
+    buffer.writeln('port: $_httpPort');
+    buffer.writeln('socks-port: $_socksPort');
+    buffer.writeln('mixed-port: $_mixedPort');
+    buffer.writeln('allow-lan: false');
+    buffer.writeln('mode: rule');
+    buffer.writeln('log-level: warning');
+    buffer.writeln('external-controller: 127.0.0.1:$_controllerPort');
+    if (_controllerSecret.isNotEmpty) {
+      buffer.writeln('secret: $_controllerSecret');
+    }
+    // 启用 unified-delay 以获取真实 TLS 延迟
+    buffer.writeln('unified-delay: true');
+    buffer.writeln('tcp-concurrent: true');
+    buffer.writeln();
+
+    // 最小 DNS 配置
+    buffer.writeln('dns:');
+    buffer.writeln('  enable: true');
+    buffer.writeln('  enhanced-mode: fake-ip');
+    buffer.writeln('  fake-ip-range: 198.18.0.1/16');
+    buffer.writeln('  nameserver:');
+    buffer.writeln('    - 8.8.8.8');
+    buffer.writeln('    - 1.1.1.1');
+    buffer.writeln();
+
+    // 添加所有节点
+    buffer.writeln('proxies:');
+    for (final node in _nodes) {
+      buffer.writeln('  - name: ${node.name}');
+      buffer.writeln('    server: ${node.server}');
+      buffer.writeln('    port: ${node.port}');
+      buffer.writeln('    type: ${_getProxyType(node.protocol)}');
+
+      node.settings.forEach((key, value) {
+        if (value != null && value.toString().isNotEmpty) {
+          if (value is String && value.contains(':')) {
+            buffer.writeln('    $key: "$value"');
+          } else if (value is bool) {
+            buffer.writeln('    $key: $value');
+          } else if (value is List) {
+            buffer.writeln('    $key:');
+            for (final item in value) {
+              buffer.writeln('      - $item');
+            }
+          } else if (value is Map) {
+            buffer.writeln('    $key:');
+            value.forEach((k, v) {
+              buffer.writeln('      $k: $v');
+            });
+          } else {
+            buffer.writeln('    $key: $value');
+          }
+        }
+      });
+    }
+    buffer.writeln();
+
+    // 代理组
+    buffer.writeln('proxy-groups:');
+    buffer.writeln('  - name: Proxy');
+    buffer.writeln('    type: select');
+    buffer.writeln('    proxies:');
+    for (final node in _nodes) {
+      buffer.writeln('      - ${node.name}');
+    }
+    buffer.writeln();
+
+    // 简单规则 - 全部直连（仅用于测试）
+    buffer.writeln('rules:');
+    buffer.writeln('  - MATCH,DIRECT');
+
+    final file = File(configPath);
+    await file.writeAsString(buffer.toString());
+
+    VortexLogger.d('Delay test config written to: $configPath');
+    return configPath;
+  }
+
+  /// 测试所有节点延迟 - 真实全链路延迟
+  ///
+  /// 通过 Mihomo API 批量测试所有节点的真实代理延迟
+  /// 如果核心未运行，会临时启动核心进行测试
+  ///
+  /// [timeout] 每个节点的测试超时时间（毫秒）
+  /// [onProgress] 测试进度回调，参数为 (完成数, 总数, 当前节点ID, 延迟)
+  Future<Map<String, int>> testAllNodesDelay({
+    int timeout = 10000,
+    void Function(int completed, int total, String nodeId, int delay)?
+    onProgress,
+  }) async {
     final results = <String, int>{};
 
-    // 如果核心运行中，使用 API 批量测试
-    if (isConnected) {
-      final proxies = await _mihomoService.getProxies();
-      if (proxies != null && proxies['proxies'] != null) {
-        for (final node in _nodes) {
-          final delay = await _mihomoService.testProxyDelay(
-            node.name,
-            timeout: timeout,
-          );
-          results[node.id] = delay ?? -1;
+    if (_nodes.isEmpty) {
+      VortexLogger.w('No nodes to test');
+      return results;
+    }
+
+    // 确保核心运行中
+    final needStopCore = !isConnected && !_isTempCoreRunning;
+    if (!isConnected && !_isTempCoreRunning) {
+      VortexLogger.i('Starting temp core for batch delay test...');
+      _isTempCoreRunning = true;
+
+      try {
+        final configPath = await _writeDelayTestConfig();
+        final started = await _platformChannel.startCore(configPath);
+        if (!started) {
+          VortexLogger.w('Failed to start temp core');
+          _isTempCoreRunning = false;
+          return results;
         }
+
+        // 等待核心启动
+        await Future.delayed(const Duration(milliseconds: 1500));
+
+        final isHealthy = await _mihomoService.healthCheck();
+        if (!isHealthy) {
+          VortexLogger.w('Temp core health check failed');
+          await _platformChannel.stopCore();
+          _isTempCoreRunning = false;
+          return results;
+        }
+      } catch (e) {
+        VortexLogger.e('Failed to start temp core for batch test', e);
+        _isTempCoreRunning = false;
         return results;
       }
     }
 
-    // 并行测试（限制并发数）
-    const batchSize = 10;
+    // 批量测试（并发限制为 5，避免请求过多）
+    const batchSize = 5;
+    int completed = 0;
+    final total = _nodes.length;
+
     for (var i = 0; i < _nodes.length; i += batchSize) {
       final batch = _nodes.skip(i).take(batchSize).toList();
       final futures = batch.map((node) async {
-        final delay = await testNodeDelay(node, timeout: timeout);
-        return MapEntry(node.id, delay);
+        final delay = await _mihomoService.testProxyDelay(
+          node.name,
+          timeout: timeout,
+        );
+        return MapEntry(node.id, delay ?? -1);
       });
+
       final batchResults = await Future.wait(futures);
-      results.addEntries(batchResults);
+      for (final entry in batchResults) {
+        results[entry.key] = entry.value;
+        completed++;
+        onProgress?.call(completed, total, entry.key, entry.value);
+      }
     }
 
+    // 如果是临时启动的核心，停止它
+    if (needStopCore && _isTempCoreRunning) {
+      VortexLogger.i('Stopping temp core after batch test...');
+      await _platformChannel.stopCore();
+      _isTempCoreRunning = false;
+    }
+
+    VortexLogger.i('Batch delay test completed: ${results.length} nodes');
     return results;
   }
 
@@ -387,6 +589,10 @@ class VpnService {
     if (_controllerSecret.isNotEmpty) {
       buffer.writeln('secret: $_controllerSecret');
     }
+    // 启用 unified-delay 以获取真实 TLS 延迟
+    // 参考 Clash for Windows, Clash Verge Rev, FlClash 的实现
+    buffer.writeln('unified-delay: true');
+    buffer.writeln('tcp-concurrent: true');
     buffer.writeln();
 
     // DNS 配置

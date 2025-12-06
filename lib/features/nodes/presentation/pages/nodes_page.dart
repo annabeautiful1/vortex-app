@@ -7,7 +7,6 @@ import '../../../../shared/models/proxy_node.dart';
 import '../../../../shared/themes/app_theme.dart';
 import '../../domain/nodes_provider.dart';
 import '../../../dashboard/domain/connection_provider.dart';
-import '../../../auth/domain/auth_provider.dart';
 
 class NodesPage extends ConsumerWidget {
   const NodesPage({super.key});
@@ -54,88 +53,34 @@ class NodesPage extends ConsumerWidget {
                           .slideX(begin: -0.1, end: 0),
                     ],
                   ),
-                  Row(
-                    children: [
-                      // Speed Test Button
-                      Container(
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: theme.dividerColor.withOpacity(0.1),
-                          ),
-                        ),
-                        child: IconButton(
-                          onPressed: () {
-                            if (nodesState.isTesting) {
-                              ref.read(nodesProvider.notifier).stopTesting();
-                            } else {
-                              ref
-                                  .read(nodesProvider.notifier)
-                                  .testAllLatencies();
-                            }
-                          },
-                          icon: Icon(
-                            nodesState.isTesting
-                                ? Icons.stop_rounded
-                                : Icons.speed_rounded,
-                            color: nodesState.isTesting
-                                ? AppTheme.warningColor
-                                : theme.colorScheme.onSurface.withOpacity(0.7),
-                          ),
-                          tooltip: nodesState.isTesting ? '停止测速' : '全部测速',
-                        ),
-                      ).animate().fadeIn(delay: 200.ms).scale(),
-
-                      const SizedBox(width: 12),
-
-                      // Refresh Button
-                      Container(
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: theme.dividerColor.withOpacity(0.1),
-                          ),
-                        ),
-                        child: IconButton(
-                          onPressed: () async {
-                            final authState = ref.read(authProvider);
-                            final subscribeUrl =
-                                authState.user?.subscription.subscriptionUrl;
-                            if (subscribeUrl != null &&
-                                subscribeUrl.isNotEmpty) {
-                              try {
-                                await ref
-                                    .read(nodesProvider.notifier)
-                                    .refreshNodesFromUrl(subscribeUrl);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('节点更新成功')),
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('更新失败: $e')),
-                                  );
-                                }
-                              }
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('请先登录以获取订阅')),
-                              );
-                            }
-                          },
-                          icon: Icon(
-                            Icons.refresh_rounded,
-                            color: theme.colorScheme.onSurface.withOpacity(0.7),
-                          ),
-                          tooltip: '刷新订阅',
-                        ),
-                      ).animate().fadeIn(delay: 300.ms).scale(),
-                    ],
-                  ),
+                  // 测速按钮
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: theme.dividerColor.withOpacity(0.1),
+                      ),
+                    ),
+                    child: IconButton(
+                      onPressed: () {
+                        if (nodesState.isTesting) {
+                          ref.read(nodesProvider.notifier).stopTesting();
+                        } else {
+                          ref.read(nodesProvider.notifier).testAllLatencies();
+                        }
+                      },
+                      icon: Icon(
+                        nodesState.isTesting
+                            ? Icons.stop_rounded
+                            : Icons.speed_rounded,
+                        color: nodesState.isTesting
+                            ? AppTheme.warningColor
+                            : theme.colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                      tooltip: nodesState.isTesting ? '停止测速' : '全部测速',
+                    ),
+                  ).animate().fadeIn(delay: 200.ms).scale(),
                 ],
               ),
             ),

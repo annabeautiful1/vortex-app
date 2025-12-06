@@ -71,10 +71,17 @@ user_agent: ""
 # 用户点击可跳转到官网
 homepage_url: ""
 
-# 客服地址 (可选)
-# 在线客服系统地址
-support_url: ""
-
 # Telegram 链接 (可选)
 # Telegram 群组或频道链接
 telegram_url: ""
+
+# ==================== Crisp 在线客服配置 ====================
+
+# Crisp Website ID (必填)
+# 在 Crisp 后台 Settings > Website Settings > Website ID 获取
+# 格式示例: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+crisp_website_id: ""
+
+# Crisp 欢迎消息 (可选)
+# 用户首次打开客服时显示的欢迎消息
+crisp_welcome_message: "您好！请问有什么可以帮助您的？"

@@ -1,7 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../shared/themes/app_theme.dart';
+import '../../../../core/config/build_config.dart';
+import '../../../auth/domain/auth_provider.dart';
 import '../../domain/support_provider.dart';
 
 class SupportPage extends ConsumerStatefulWidget {
@@ -12,33 +18,76 @@ class SupportPage extends ConsumerStatefulWidget {
 }
 
 class _SupportPageState extends ConsumerState<SupportPage> {
-  final _messageController = TextEditingController();
-  final _scrollController = ScrollController();
+  WebViewController? _webViewController;
+  bool _isWebViewLoading = true;
 
   @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _initWebView();
   }
 
-  void _sendMessage() {
-    final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+  void _initWebView() {
+    // 检查平台是否支持 WebView
+    if (!_isWebViewSupported()) {
+      return;
+    }
 
-    ref.read(supportProvider.notifier).sendMessage(text);
-    _messageController.clear();
+    final supportState = ref.read(supportProvider);
+    final authState = ref.read(authProvider);
 
-    // Scroll to bottom
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    if (!supportState.isConfigured || supportState.chatUrl == null) {
+      return;
+    }
+
+    // 获取带用户信息的聊天 URL
+    final chatUrl = ref.read(supportProvider.notifier).getChatUrlWithUserInfo(
+      email: authState.user?.email,
+      nickname: authState.user?.username,
+      userData: {
+        'plan': authState.user?.subscription.planName ?? '未知',
+        'expire': authState.user?.subscription.expireAt.toString() ?? '未知',
+      },
+    );
+
+    if (chatUrl == null) return;
+
+    _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.white)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (String url) {
+            setState(() {
+              _isWebViewLoading = true;
+            });
+          },
+          onPageFinished: (String url) {
+            setState(() {
+              _isWebViewLoading = false;
+            });
+          },
+          onWebResourceError: (WebResourceError error) {
+            debugPrint('WebView error: ${error.description}');
+          },
+          onNavigationRequest: (NavigationRequest request) {
+            // 允许 Crisp 相关的 URL
+            if (request.url.contains('crisp.chat') ||
+                request.url.contains('go.crisp.chat')) {
+              return NavigationDecision.navigate;
+            }
+            // 其他外部链接在浏览器中打开
+            launchUrl(Uri.parse(request.url));
+            return NavigationDecision.prevent;
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(chatUrl));
+  }
+
+  bool _isWebViewSupported() {
+    // WebView 在桌面平台支持有限
+    return Platform.isAndroid || Platform.isIOS;
   }
 
   @override
@@ -50,129 +99,11 @@ class _SupportPageState extends ConsumerState<SupportPage> {
         child: Column(
           children: [
             // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                border: Border(
-                  bottom: BorderSide(color: Theme.of(context).dividerColor),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.support_agent,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '在线客服',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                        Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: supportState.isOnline
-                                    ? AppTheme.connectedColor
-                                    : Colors.grey,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              supportState.isOnline ? '在线' : '离线',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.more_vert),
-                    onPressed: () {
-                      // Show options
-                    },
-                  ),
-                ],
-              ),
-            ),
+            _buildHeader(context, supportState),
 
-            // Messages
+            // Content
             Expanded(
-              child: supportState.messages.isEmpty
-                  ? _buildEmptyState(context)
-                  : ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(16),
-                      itemCount: supportState.messages.length,
-                      itemBuilder: (context, index) {
-                        final message = supportState.messages[index];
-                        return _MessageBubble(message: message);
-                      },
-                    ),
-            ),
-
-            // Input
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                border: Border(
-                  top: BorderSide(color: Theme.of(context).dividerColor),
-                ),
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.image),
-                    onPressed: () {
-                      // Pick image
-                    },
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: InputDecoration(
-                        hintText: '输入消息...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                      ),
-                      maxLines: null,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendMessage(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    icon: const Icon(Icons.send),
-                    onPressed: _sendMessage,
-                  ),
-                ],
-              ),
+              child: _buildContent(context, supportState),
             ),
           ],
         ),
@@ -180,7 +111,150 @@ class _SupportPageState extends ConsumerState<SupportPage> {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildHeader(BuildContext context, SupportState supportState) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(color: theme.dividerColor),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.support_agent,
+              color: AppTheme.primaryColor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '在线客服',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: supportState.isOnline
+                            ? AppTheme.connectedColor
+                            : Colors.grey,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      supportState.isLoading
+                          ? '检查中...'
+                          : supportState.isOnline
+                              ? '在线'
+                              : '离线',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // 刷新按钮
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              ref.read(supportProvider.notifier).checkOnlineStatus();
+              _webViewController?.reload();
+            },
+            tooltip: '刷新',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, SupportState supportState) {
+    // 加载中
+    if (supportState.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // 未配置 Crisp
+    if (!supportState.isConfigured) {
+      return _buildNotConfigured(context);
+    }
+
+    // WebView 不支持的平台（桌面）
+    if (!_isWebViewSupported()) {
+      return _buildDesktopFallback(context, supportState);
+    }
+
+    // 显示 WebView
+    return Stack(
+      children: [
+        if (_webViewController != null)
+          WebViewWidget(controller: _webViewController!),
+        if (_isWebViewLoading)
+          const Center(child: CircularProgressIndicator()),
+      ],
+    );
+  }
+
+  Widget _buildNotConfigured(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.support_agent_outlined,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '客服系统未配置',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '请联系管理员配置 Crisp 客服系统',
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: Colors.grey.shade500),
+          ),
+          const SizedBox(height: 24),
+          // 显示 Telegram 链接（如果有）
+          if (BuildConfig.instance.hasTelegram)
+            ElevatedButton.icon(
+              onPressed: () {
+                launchUrl(Uri.parse(BuildConfig.instance.telegramUrl));
+              },
+              icon: const Icon(Icons.telegram),
+              label: const Text('通过 Telegram 联系'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopFallback(BuildContext context, SupportState supportState) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -192,105 +266,35 @@ class _SupportPageState extends ConsumerState<SupportPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            '欢迎使用在线客服',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
+            supportState.welcomeMessage,
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(color: Colors.grey.shade600),
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
-          Text(
-            '有任何问题，请随时向我们咨询',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade500),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () {
+              if (supportState.chatUrl != null) {
+                launchUrl(Uri.parse(supportState.chatUrl!));
+              }
+            },
+            icon: const Icon(Icons.open_in_browser),
+            label: const Text('在浏览器中打开客服'),
           ),
+          const SizedBox(height: 12),
+          // 显示 Telegram 链接（如果有）
+          if (BuildConfig.instance.hasTelegram)
+            OutlinedButton.icon(
+              onPressed: () {
+                launchUrl(Uri.parse(BuildConfig.instance.telegramUrl));
+              },
+              icon: const Icon(Icons.telegram),
+              label: const Text('通过 Telegram 联系'),
+            ),
         ],
       ),
     );
-  }
-}
-
-class _MessageBubble extends StatelessWidget {
-  final ChatMessage message;
-
-  const _MessageBubble({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    final isMe = message.isFromUser;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        mainAxisAlignment: isMe
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!isMe) ...[
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-              child: Icon(
-                Icons.support_agent,
-                size: 20,
-                color: AppTheme.primaryColor,
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: isMe
-                    ? AppTheme.primaryColor
-                    : Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isMe ? 16 : 4),
-                  bottomRight: Radius.circular(isMe ? 4 : 16),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (message.imageUrl != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        message.imageUrl!,
-                        width: 200,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  if (message.text != null)
-                    Text(
-                      message.text!,
-                      style: TextStyle(color: isMe ? Colors.white : null),
-                    ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatTime(message.timestamp),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isMe
-                          ? Colors.white.withValues(alpha: 0.7)
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (isMe) const SizedBox(width: 8),
-        ],
-      ),
-    );
-  }
-
-  String _formatTime(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 }

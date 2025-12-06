@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/proxy_node.dart';
-import '../../../core/proxy/proxy_core.dart';
+import '../../../core/vpn/vpn_service.dart';
 import '../../../core/subscription/subscription_parser.dart';
 import '../../../shared/services/storage_service.dart';
 import '../../../shared/constants/app_constants.dart';
@@ -142,26 +142,54 @@ class NodesNotifier extends StateNotifier<NodesState> {
     }
   }
 
-  /// 测试所有节点延迟（逐个测试，实时更新结果）
+  /// 测试所有节点延迟（真实全链路延迟）
+  ///
+  /// 通过 Mihomo API 测试完整链路延迟：
+  /// 用户设备 → 中转服务器(可选) → 落地服务器 → 测试URL
+  ///
+  /// 如果 VPN 未连接，会临时启动核心进行测试
   Future<void> testAllLatencies() async {
     if (state.isTesting) return; // 防止重复测试
+    if (state.nodes.isEmpty) {
+      VortexLogger.w('No nodes to test');
+      return;
+    }
+
     state = state.copyWith(isTesting: true);
 
     try {
       // 清空旧的延迟数据
       state = state.copyWith(latencies: {});
 
-      // 逐个测试节点，实时更新结果
-      for (final node in state.nodes) {
-        if (!state.isTesting) break; // 允许中断测试
+      // 确保 VpnService 有节点列表
+      VpnService.instance.setNodes(state.nodes);
 
-        final latency = await ProxyCore.instance.testLatency(node);
-        final newLatencies = Map<String, int?>.from(state.latencies);
-        newLatencies[node.id] = latency; // null 或 -1 表示超时/失败
-        state = state.copyWith(latencies: newLatencies);
-      }
+      // 使用 VpnService 的真实延迟测试
+      // 如果核心未运行，会自动临时启动
+      await VpnService.instance.testAllNodesDelay(
+        timeout: 10000,
+        onProgress: (completed, total, nodeId, delay) {
+          // 实时更新单个节点的延迟
+          final newLatencies = Map<String, int?>.from(state.latencies);
+          newLatencies[nodeId] = delay > 0 ? delay : null;
+          state = state.copyWith(latencies: newLatencies);
+
+          VortexLogger.d(
+            'Delay test progress: $completed/$total, $nodeId: ${delay}ms',
+          );
+        },
+      );
+
+      // 停止临时核心（如果有）
+      await VpnService.instance.stopTempCoreIfRunning();
+
+      VortexLogger.i(
+        'All latency tests completed: ${state.latencies.length} nodes',
+      );
     } catch (e) {
       VortexLogger.e('Failed to test latencies', e);
+      // 确保停止临时核心
+      await VpnService.instance.stopTempCoreIfRunning();
     } finally {
       state = state.copyWith(isTesting: false);
     }
@@ -170,14 +198,24 @@ class NodesNotifier extends StateNotifier<NodesState> {
   /// 停止测速
   void stopTesting() {
     state = state.copyWith(isTesting: false);
+    // 停止临时核心
+    VpnService.instance.stopTempCoreIfRunning();
   }
 
-  /// 测试单个节点延迟
+  /// 测试单个节点延迟（真实全链路延迟）
   Future<void> testLatency(ProxyNode node) async {
-    final latency = await ProxyCore.instance.testLatency(node);
+    // 确保 VpnService 有节点列表
+    if (VpnService.instance.nodes.isEmpty) {
+      VpnService.instance.setNodes(state.nodes);
+    }
+
+    final delay = await VpnService.instance.testNodeDelay(node, timeout: 10000);
     final newLatencies = Map<String, int?>.from(state.latencies);
-    newLatencies[node.id] = latency;
+    newLatencies[node.id] = delay > 0 ? delay : null;
     state = state.copyWith(latencies: newLatencies);
+
+    // 停止临时核心（如果有）
+    await VpnService.instance.stopTempCoreIfRunning();
   }
 
   /// 获取节点延迟

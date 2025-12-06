@@ -1,86 +1,125 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/build_config.dart';
 import '../../../core/utils/logger.dart';
+import '../../../shared/services/crisp_service.dart';
 
-class ChatMessage {
-  final String id;
-  final String? text;
-  final String? imageUrl;
-  final bool isFromUser;
-  final DateTime timestamp;
-
-  ChatMessage({
-    required this.id,
-    this.text,
-    this.imageUrl,
-    required this.isFromUser,
-    required this.timestamp,
-  });
-}
-
+/// 客服状态
 class SupportState {
-  final List<ChatMessage> messages;
   final bool isOnline;
   final bool isLoading;
+  final bool isConfigured;
+  final String? chatUrl;
+  final String welcomeMessage;
 
   const SupportState({
-    this.messages = const [],
-    this.isOnline = true,
-    this.isLoading = false,
+    this.isOnline = false,
+    this.isLoading = true,
+    this.isConfigured = false,
+    this.chatUrl,
+    this.welcomeMessage = '您好！请问有什么可以帮助您的？',
   });
 
   SupportState copyWith({
-    List<ChatMessage>? messages,
     bool? isOnline,
     bool? isLoading,
+    bool? isConfigured,
+    String? chatUrl,
+    String? welcomeMessage,
   }) {
     return SupportState(
-      messages: messages ?? this.messages,
       isOnline: isOnline ?? this.isOnline,
       isLoading: isLoading ?? this.isLoading,
+      isConfigured: isConfigured ?? this.isConfigured,
+      chatUrl: chatUrl ?? this.chatUrl,
+      welcomeMessage: welcomeMessage ?? this.welcomeMessage,
     );
   }
 }
 
+/// 客服状态管理
 class SupportNotifier extends StateNotifier<SupportState> {
-  SupportNotifier() : super(const SupportState());
+  SupportNotifier() : super(const SupportState()) {
+    _init();
+  }
 
-  void sendMessage(String text) {
-    final message = ChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      text: text,
-      isFromUser: true,
-      timestamp: DateTime.now(),
+  Timer? _statusTimer;
+
+  Future<void> _init() async {
+    final config = BuildConfig.instance;
+
+    // 检查是否配置了 Crisp
+    if (!config.hasCrisp) {
+      state = state.copyWith(
+        isLoading: false,
+        isConfigured: false,
+      );
+      VortexLogger.w('Crisp not configured');
+      return;
+    }
+
+    // 初始化 Crisp 服务
+    await CrispService.instance.init();
+
+    // 获取聊天 URL
+    final chatUrl = CrispService.instance.getChatUrl();
+
+    state = state.copyWith(
+      isLoading: false,
+      isConfigured: true,
+      chatUrl: chatUrl,
+      welcomeMessage: config.crispWelcomeMessage,
     );
 
-    state = state.copyWith(messages: [...state.messages, message]);
+    // 监听在线状态变化
+    CrispService.instance.operatorOnline.addListener(_onOperatorStatusChanged);
 
-    VortexLogger.i('Sent message: $text');
-  }
+    // 初始检查状态
+    await checkOnlineStatus();
 
-  void sendImage(String imagePath) {
-    final message = ChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      imageUrl: imagePath,
-      isFromUser: true,
-      timestamp: DateTime.now(),
+    // 定期检查状态（每 30 秒）
+    _statusTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => checkOnlineStatus(),
     );
-
-    state = state.copyWith(messages: [...state.messages, message]);
-
-    VortexLogger.i('Sent image: $imagePath');
   }
 
-  void receiveMessage(ChatMessage message) {
-    state = state.copyWith(messages: [...state.messages, message]);
+  void _onOperatorStatusChanged() {
+    state = state.copyWith(isOnline: CrispService.instance.operatorOnline.value);
   }
 
-  void setOnlineStatus(bool isOnline) {
-    state = state.copyWith(isOnline: isOnline);
+  /// 检查客服在线状态
+  Future<void> checkOnlineStatus() async {
+    if (!state.isConfigured) return;
+
+    try {
+      final isOnline = await CrispService.instance.checkOperatorStatus();
+      state = state.copyWith(isOnline: isOnline);
+    } catch (e) {
+      VortexLogger.e('Failed to check online status', e);
+    }
   }
 
-  void clearMessages() {
-    state = state.copyWith(messages: []);
+  /// 获取带用户信息的聊天 URL
+  String? getChatUrlWithUserInfo({
+    String? email,
+    String? nickname,
+    Map<String, dynamic>? userData,
+  }) {
+    return CrispService.instance.getChatUrl(
+      email: email,
+      nickname: nickname,
+      userData: userData,
+    );
+  }
+
+  @override
+  void dispose() {
+    _statusTimer?.cancel();
+    CrispService.instance.operatorOnline.removeListener(_onOperatorStatusChanged);
+    super.dispose();
   }
 }
 

@@ -45,10 +45,13 @@ class BuildConfig {
 
   // Links
   final String homepageUrl;
-  final String supportUrl;
   final String telegramUrl;
   final String? privacyUrl;
   final String? termsUrl;
+
+  // Crisp Configuration
+  final String crispWebsiteId;
+  final String crispWelcomeMessage;
 
   // Version
   final String appVersion;
@@ -66,10 +69,11 @@ class BuildConfig {
     required this.disableDirect,
     required this.userAgent,
     required this.homepageUrl,
-    required this.supportUrl,
     required this.telegramUrl,
     this.privacyUrl,
     this.termsUrl,
+    required this.crispWebsiteId,
+    required this.crispWelcomeMessage,
     this.appVersion = '1.0.0',
   });
 
@@ -104,10 +108,15 @@ class BuildConfig {
         disableDirect: _getBool(yaml, 'disable_direct', false),
         userAgent: _getString(yaml, 'user_agent', ''),
         homepageUrl: _getString(yaml, 'homepage_url', ''),
-        supportUrl: _getString(yaml, 'support_url', ''),
         telegramUrl: _getString(yaml, 'telegram_url', ''),
         privacyUrl: _getStringOrNull(yaml, 'privacy_url'),
         termsUrl: _getStringOrNull(yaml, 'terms_url'),
+        crispWebsiteId: _getString(yaml, 'crisp_website_id', ''),
+        crispWelcomeMessage: _getString(
+          yaml,
+          'crisp_welcome_message',
+          '您好！请问有什么可以帮助您的？',
+        ),
         appVersion: _getString(yaml, 'app_version', '1.0.0'),
       );
 
@@ -149,8 +158,9 @@ API 地址列表: ${_instance!.apiEndpoints.join(', ')}''',
         disableDirect: false,
         userAgent: '',
         homepageUrl: '',
-        supportUrl: '',
         telegramUrl: '',
+        crispWebsiteId: '',
+        crispWelcomeMessage: '您好！请问有什么可以帮助您的？',
       );
 
       DevMode.instance.log('BuildConfig', '使用默认配置', detail: 'API 地址为空，需要手动配置');
@@ -274,8 +284,8 @@ API 地址列表: ${_instance!.apiEndpoints.join(', ')}''',
   /// Check if has homepage URL configured
   bool get hasHomepage => homepageUrl.isNotEmpty;
 
-  /// Check if has support URL configured
-  bool get hasSupport => supportUrl.isNotEmpty;
+  /// Check if has Crisp configured
+  bool get hasCrisp => crispWebsiteId.isNotEmpty;
 
   /// Check if has Telegram URL configured
   bool get hasTelegram => telegramUrl.isNotEmpty;
