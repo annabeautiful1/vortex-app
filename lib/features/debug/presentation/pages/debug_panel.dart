@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/dev_mode.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../core/config/build_config.dart';
 import '../../../../core/api/api_manager.dart';
 
@@ -15,7 +16,33 @@ class DebugPanel extends ConsumerStatefulWidget {
   ConsumerState<DebugPanel> createState() => _DebugPanelState();
 }
 
-class _DebugPanelState extends ConsumerState<DebugPanel> {
+class _DebugPanelState extends ConsumerState<DebugPanel>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  String _fileLogs = '加载中...';
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _loadFileLogs();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadFileLogs() async {
+    final logs = await VortexLogger.exportLogs();
+    if (mounted) {
+      setState(() {
+        _fileLogs = logs;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -28,10 +55,20 @@ class _DebugPanelState extends ConsumerState<DebugPanel> {
         title: const Text('开发者模式'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: '刷新日志',
+            onPressed: () {
+              _loadFileLogs();
+              setState(() {});
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.copy),
             tooltip: '复制日志',
             onPressed: () {
-              final logText = DevMode.instance.exportLogs();
+              final logText = _tabController.index == 0
+                  ? DevMode.instance.exportLogs()
+                  : _fileLogs;
               Clipboard.setData(ClipboardData(text: logText));
               ScaffoldMessenger.of(
                 context,
@@ -53,6 +90,13 @@ class _DebugPanelState extends ConsumerState<DebugPanel> {
             },
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: '开发日志'),
+            Tab(text: '文件日志'),
+          ],
+        ),
       ),
       body: Column(
         children: [
@@ -92,51 +136,100 @@ class _DebugPanelState extends ConsumerState<DebugPanel> {
                     '活动端点',
                     ApiManager.instance.activeEndpoint?.url ?? '(无)',
                   ),
+                  _buildConfigRow('日志文件', VortexLogger.logFilePath ?? '(未初始化)'),
                 ],
               ),
             ),
           ),
 
-          // 日志列表
+          // 日志列表 (TabView)
           Expanded(
-            child: Card(
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Text(
-                          '调试日志',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // 开发日志 Tab
+                Card(
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Text(
+                              '开发日志 (内存)',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '${logs.length} 条',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      Expanded(
+                        child: logs.isEmpty
+                            ? const Center(child: Text('暂无日志'))
+                            : ListView.builder(
+                                itemCount: logs.length,
+                                itemBuilder: (context, index) {
+                                  // 倒序显示，最新的在上面
+                                  final entry = logs[logs.length - 1 - index];
+                                  return _buildLogEntry(entry);
+                                },
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 文件日志 Tab
+                Card(
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Text(
+                              '文件日志',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Spacer(),
+                            TextButton.icon(
+                              icon: const Icon(Icons.refresh, size: 16),
+                              label: const Text('刷新'),
+                              onPressed: _loadFileLogs,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: SelectableText(
+                            _fileLogs,
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 12,
+                            ),
                           ),
                         ),
-                        const Spacer(),
-                        Text(
-                          '${logs.length} 条',
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const Divider(height: 1),
-                  Expanded(
-                    child: logs.isEmpty
-                        ? const Center(child: Text('暂无日志'))
-                        : ListView.builder(
-                            itemCount: logs.length,
-                            itemBuilder: (context, index) {
-                              // 倒序显示，最新的在上面
-                              final entry = logs[logs.length - 1 - index];
-                              return _buildLogEntry(entry);
-                            },
-                          ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

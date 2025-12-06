@@ -201,29 +201,42 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _checkStoredSession() async {
     VortexLogger.i('Checking stored session...');
 
-    final authData = await StorageService.instance.getSecure(
-      AppConstants.tokenKey,
-    );
-    final baseUrl = await StorageService.instance.getSecure(
-      AppConstants.apiEndpointsKey,
-    );
-    final panelTypeStr = StorageService.instance.getString('panel_type');
+    try {
+      final authData = await StorageService.instance.getSecure(
+        AppConstants.tokenKey,
+      );
+      final baseUrl = await StorageService.instance.getSecure(
+        AppConstants.apiEndpointsKey,
+      );
+      final panelTypeStr = StorageService.instance.getString('panel_type');
 
-    VortexLogger.i(
-      'Stored session: authData=${authData != null}, baseUrl=$baseUrl, panelType=$panelTypeStr',
-    );
+      VortexLogger.i(
+        'Stored session: authData=${authData != null}, baseUrl=$baseUrl, panelType=$panelTypeStr',
+      );
 
-    if (authData != null && authData.isNotEmpty) {
-      try {
+      if (authData != null && authData.isNotEmpty) {
         // Determine panel type
         final panelType = panelTypeStr == 'sspanel'
             ? PanelType.sspanel
             : PanelType.v2board;
 
-        // Use stored baseUrl or try to get from ApiManager
+        // Use stored baseUrl or try to get from ApiManager (with timeout)
         String? effectiveBaseUrl = baseUrl;
         if (effectiveBaseUrl == null || effectiveBaseUrl.isEmpty) {
-          effectiveBaseUrl = await ApiManager.instance.getActiveEndpointUrl();
+          VortexLogger.i('No stored baseUrl, trying ApiManager...');
+          try {
+            effectiveBaseUrl = await ApiManager.instance
+                .getActiveEndpointUrl()
+                .timeout(
+                  const Duration(seconds: 10),
+                  onTimeout: () {
+                    VortexLogger.w('ApiManager.getActiveEndpointUrl timed out');
+                    return null;
+                  },
+                );
+          } catch (e) {
+            VortexLogger.e('Failed to get active endpoint in session check', e);
+          }
         }
 
         if (effectiveBaseUrl == null || effectiveBaseUrl.isEmpty) {
@@ -238,24 +251,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
         if (panelType == PanelType.v2board) {
           _v2boardApi = V2boardApi(baseUrl: effectiveBaseUrl);
           _v2boardApi!.setAuthData(authData);
-          await _fetchV2boardUserInfo();
+          await _fetchV2boardUserInfo().timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              VortexLogger.w('V2board user info fetch timed out');
+              throw Exception('获取用户信息超时');
+            },
+          );
         } else {
           _sspanelApi = SSPanelApi(baseUrl: effectiveBaseUrl);
           _sspanelCookies = authData.split('|||');
           _sspanelApi!.setCookies(_sspanelCookies!);
-          await _fetchSSPanelUserInfo();
+          await _fetchSSPanelUserInfo().timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              VortexLogger.w('SSPanel user info fetch timed out');
+              throw Exception('获取用户信息超时');
+            },
+          );
         }
 
         state = state.copyWith(panelType: panelType, baseUrl: effectiveBaseUrl);
         VortexLogger.i('Session restored successfully');
-      } catch (e) {
-        VortexLogger.e('Failed to restore session', e);
-        // Clear invalid session data
-        await StorageService.instance.deleteSecure(AppConstants.tokenKey);
-        state = state.copyWith(isAuthenticated: false, isLoading: false);
+      } else {
+        VortexLogger.i('No stored session found');
       }
-    } else {
-      VortexLogger.i('No stored session found');
+    } catch (e) {
+      VortexLogger.e('Failed to restore session', e);
+      // Clear invalid session data
+      await StorageService.instance.deleteSecure(AppConstants.tokenKey);
+      state = state.copyWith(isAuthenticated: false, isLoading: false);
     }
   }
 

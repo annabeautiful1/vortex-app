@@ -251,6 +251,7 @@ jobs:
           AppName=Vortex
           AppVersion=1.0.0
           AppPublisher=Vortex Team
+          AppId={{A8E5B3C2-F6D9-4A1E-B7C8-2D3E4F5A6B7C}
           DefaultDirName={autopf}\Vortex
           DefaultGroupName=Vortex
           OutputDir=.
@@ -260,6 +261,8 @@ jobs:
           PrivilegesRequired=admin
           ArchitecturesAllowed=x64compatible
           ArchitecturesInstallIn64BitMode=x64compatible
+          UninstallDisplayIcon={app}\vortex_app.exe
+          UninstallDisplayName=Vortex
 
           [Languages]
           Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -282,6 +285,73 @@ jobs:
 
           [Run]
           Filename: "{app}\vortex_app.exe"; Description: "{cm:LaunchProgram,Vortex}"; Flags: nowait postinstall skipifsilent
+
+          [Code]
+          function GetUninstallString(): String;
+          var
+            sUnInstPath: String;
+            sUnInstallString: String;
+          begin
+            sUnInstPath := ExpandConstant('Software\Microsoft\Windows\CurrentVersion\Uninstall\{#SetupSetting("AppId")}_is1');
+            sUnInstallString := '';
+            if not RegQueryStringValue(HKLM, sUnInstPath, 'UninstallString', sUnInstallString) then
+              RegQueryStringValue(HKCU, sUnInstPath, 'UninstallString', sUnInstallString);
+            Result := sUnInstallString;
+          end;
+
+          function IsUpgrade(): Boolean;
+          begin
+            Result := (GetUninstallString() <> '');
+          end;
+
+          function UnInstallOldVersion(): Integer;
+          var
+            sUnInstallString: String;
+            iResultCode: Integer;
+          begin
+            Result := 0;
+            sUnInstallString := GetUninstallString();
+            if sUnInstallString <> '' then begin
+              sUnInstallString := RemoveQuotes(sUnInstallString);
+              if Exec(sUnInstallString, '/SILENT /NORESTART /SUPPRESSMSGBOXES', '', SW_HIDE, ewWaitUntilTerminated, iResultCode) then
+                Result := 3
+              else
+                Result := 2;
+            end else
+              Result := 1;
+          end;
+
+          procedure CurStepChanged(CurStep: TSetupStep);
+          begin
+            if (CurStep=ssInstall) then
+            begin
+              if (IsUpgrade()) then
+              begin
+                UnInstallOldVersion();
+              end;
+            end;
+          end;
+
+          function InitializeSetup(): Boolean;
+          var
+            V: Integer;
+            sMsg: String;
+          begin
+            Result := True;
+            if IsUpgrade() then begin
+              sMsg := 'Detected an existing Vortex installation.' + #13#10 + #13#10 +
+                      'Click Yes to uninstall the old version first (recommended).' + #13#10 +
+                      'Click No to overwrite the existing installation.' + #13#10 +
+                      'Click Cancel to abort.';
+              V := MsgBox(sMsg, mbConfirmation, MB_YESNOCANCEL);
+              if V = IDCANCEL then begin
+                Result := False;
+              end else if V = IDYES then begin
+                UnInstallOldVersion();
+              end;
+              // If IDNO, just continue with overwrite installation
+            end;
+          end;
           "@ | Out-File -FilePath "installer.iss" -Encoding UTF8
 
       - name: Build Installer
