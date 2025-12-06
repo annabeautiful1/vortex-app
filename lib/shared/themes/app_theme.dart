@@ -6,12 +6,18 @@ class AppTheme {
 
   // Brand Colors - Minimalist & Modern
   // Primary: A vibrant, electric violet/indigo that pops against monochrome
-  static const Color primaryColor = Color(0xFF6366F1); 
+  static const Color primaryColor = Color(0xFF6366F1);
   static const Color primaryDark = Color(0xFF4F46E5);
   static const Color primaryLight = Color(0xFF818CF8);
 
+  // Secondary & Accent Colors (for backward compatibility)
+  static const Color secondaryColor = Color(0xFF8B5CF6); // Purple
+  static const Color accentColor = Color(0xFF06B6D4); // Cyan
+
   // Neutral Colors - Slate/Zinc based for a premium feel
-  static const Color backgroundLight = Color(0xFFFAFAFA); // Very light grey, not stark white
+  static const Color backgroundLight = Color(
+    0xFFFAFAFA,
+  ); // Very light grey, not stark white
   static const Color surfaceLight = Color(0xFFFFFFFF);
   static const Color backgroundDark = Color(0xFF09090B); // Almost black
   static const Color surfaceDark = Color(0xFF18181B); // Dark zinc
@@ -28,13 +34,13 @@ class AppTheme {
   static const Color disconnectedColor = Color(0xFF71717A); // Zinc 500
 
   // Traffic Colors
-  static const Color uploadColor = Color(0xFF8B5CF6); 
-  static const Color downloadColor = Color(0xFF06B6D4); 
+  static const Color uploadColor = Color(0xFF8B5CF6);
+  static const Color downloadColor = Color(0xFF06B6D4);
 
   // Light Theme
   static ThemeData get lightTheme {
     final baseTextTheme = GoogleFonts.outfitTextTheme();
-    
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
@@ -148,8 +154,10 @@ class AppTheme {
 
   // Dark Theme
   static ThemeData get darkTheme {
-    final baseTextTheme = GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme);
-    
+    final baseTextTheme = GoogleFonts.outfitTextTheme(
+      ThemeData.dark().textTheme,
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,

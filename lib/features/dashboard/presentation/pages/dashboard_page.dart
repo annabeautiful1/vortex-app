@@ -8,7 +8,6 @@ import '../widgets/status_card.dart';
 import '../widgets/traffic_card.dart';
 import '../widgets/quick_actions.dart';
 import '../widgets/realtime_traffic_card.dart';
-import '../../../../shared/themes/app_theme.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -16,7 +15,7 @@ class DashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
@@ -42,11 +41,16 @@ class DashboardPage extends ConsumerWidget {
                       ).animate().fadeIn().slideX(begin: -0.1, end: 0),
                       const SizedBox(height: 4),
                       Text(
-                        'Welcome back to Vortex',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
-                        ),
-                      ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1, end: 0),
+                            'Welcome back to Vortex',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurface.withOpacity(
+                                0.6,
+                              ),
+                            ),
+                          )
+                          .animate()
+                          .fadeIn(delay: 100.ms)
+                          .slideX(begin: -0.1, end: 0),
                     ],
                   ),
                   // Refresh button
@@ -87,7 +91,9 @@ class DashboardPage extends ConsumerWidget {
                       children: [
                         Expanded(child: _animateCard(const StatusCard(), 400)),
                         const SizedBox(width: 24),
-                        Expanded(child: _animateCard(const RealtimeTrafficCard(), 500)),
+                        Expanded(
+                          child: _animateCard(const RealtimeTrafficCard(), 500),
+                        ),
                         const SizedBox(width: 24),
                         Expanded(child: _animateCard(const TrafficCard(), 600)),
                       ],
@@ -98,9 +104,16 @@ class DashboardPage extends ConsumerWidget {
                       children: [
                         Row(
                           children: [
-                            Expanded(child: _animateCard(const StatusCard(), 400)),
+                            Expanded(
+                              child: _animateCard(const StatusCard(), 400),
+                            ),
                             const SizedBox(width: 24),
-                            Expanded(child: _animateCard(const RealtimeTrafficCard(), 500)),
+                            Expanded(
+                              child: _animateCard(
+                                const RealtimeTrafficCard(),
+                                500,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 24),
