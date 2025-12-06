@@ -215,10 +215,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
 
       if (authData != null && authData.isNotEmpty) {
-        // Determine panel type
-        final panelType = panelTypeStr == 'sspanel'
-            ? PanelType.sspanel
-            : PanelType.v2board;
+        // Determine panel type - 优先使用存储的，否则使用 BuildConfig
+        PanelType panelType;
+        if (panelTypeStr == 'sspanel') {
+          panelType = PanelType.sspanel;
+        } else if (panelTypeStr == 'v2board') {
+          panelType = PanelType.v2board;
+        } else {
+          // 没有存储的 panelType，使用 BuildConfig
+          final config = BuildConfig.instance;
+          panelType = config.isV2board ? PanelType.v2board : PanelType.sspanel;
+          VortexLogger.i(
+            'No stored panelType, using BuildConfig: ${panelType.name}',
+          );
+        }
 
         // Use stored baseUrl or try to get from ApiManager (with timeout)
         String? effectiveBaseUrl = baseUrl;
@@ -564,6 +574,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
       password,
     );
 
+    // Save panel type and base URL for session restore
+    await StorageService.instance.setString('panel_type', 'v2board');
+    if (state.baseUrl != null) {
+      await StorageService.instance.setSecure(
+        AppConstants.apiEndpointsKey,
+        state.baseUrl!,
+      );
+    }
+
     // Fetch user info
     await _fetchV2boardUserInfo();
   }
@@ -592,6 +611,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
       AppConstants.savedPasswordKey,
       password,
     );
+
+    // Save panel type and base URL for session restore
+    await StorageService.instance.setString('panel_type', 'sspanel');
+    if (state.baseUrl != null) {
+      await StorageService.instance.setSecure(
+        AppConstants.apiEndpointsKey,
+        state.baseUrl!,
+      );
+    }
 
     _sspanelApi!.setCookies(authResponse.cookies);
 

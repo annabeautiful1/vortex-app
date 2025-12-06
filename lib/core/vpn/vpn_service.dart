@@ -335,7 +335,17 @@ class VpnService {
   Future<void> stopTempCoreIfRunning() async {
     if (_isTempCoreRunning && !isConnected) {
       VortexLogger.i('Stopping temp core...');
-      await _platformChannel.stopCore();
+      try {
+        await _platformChannel.stopCore().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            VortexLogger.w('Stop temp core timed out, forcing...');
+            return false;
+          },
+        );
+      } catch (e) {
+        VortexLogger.e('Failed to stop temp core', e);
+      }
       _isTempCoreRunning = false;
     }
   }

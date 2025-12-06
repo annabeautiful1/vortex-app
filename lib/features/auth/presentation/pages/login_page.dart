@@ -16,24 +16,37 @@ import '../../../nodes/domain/nodes_provider.dart';
 import '../../../dashboard/domain/connection_provider.dart';
 
 /// 禁止输入空格的 TextInputFormatter
+/// 在输入和粘贴时都会移除所有空格
 class NoSpaceInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    // 移除所有空格
-    final newText = newValue.text.replaceAll(' ', '');
+    // 移除所有空格（包括普通空格、制表符、换行等）
+    final newText = newValue.text.replaceAll(RegExp(r'\s'), '');
     if (newText == newValue.text) {
       return newValue;
     }
-    // 调整光标位置
-    final diff = newValue.text.length - newText.length;
+
+    // 计算新光标位置
+    // 统计从开始到原光标位置之间移除了多少空格
+    int removedBeforeCursor = 0;
+    final cursorPos = newValue.selection.baseOffset;
+    for (int i = 0; i < cursorPos && i < newValue.text.length; i++) {
+      if (RegExp(r'\s').hasMatch(newValue.text[i])) {
+        removedBeforeCursor++;
+      }
+    }
+
+    final newCursorPos = (cursorPos - removedBeforeCursor).clamp(
+      0,
+      newText.length,
+    );
+
     return TextEditingValue(
       text: newText,
-      selection: TextSelection.collapsed(
-        offset: (newValue.selection.baseOffset - diff).clamp(0, newText.length),
-      ),
+      selection: TextSelection.collapsed(offset: newCursorPos),
     );
   }
 }
