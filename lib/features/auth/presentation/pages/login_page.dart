@@ -84,9 +84,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   void _openDebugPanel() {
     DevMode.instance.enable();
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const DebugPanel()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const DebugPanel()));
   }
 
   Future<void> _fetchNodesAfterLogin() async {
@@ -95,7 +95,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       final subscribeUrl = authState.user?.subscription.subscriptionUrl;
 
       if (subscribeUrl != null && subscribeUrl.isNotEmpty) {
-        await ref.read(nodesProvider.notifier).refreshNodesFromUrl(subscribeUrl);
+        await ref
+            .read(nodesProvider.notifier)
+            .refreshNodesFromUrl(subscribeUrl);
         final nodesState = ref.read(nodesProvider);
         if (nodesState.nodes.isNotEmpty) {
           ref.read(connectionProvider.notifier).setNodes(nodesState.nodes);
@@ -148,20 +150,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     });
 
     try {
-      final success = await ref.read(authProvider.notifier).sendEmailVerifyCode(email);
+      final success = await ref
+          .read(authProvider.notifier)
+          .sendEmailVerifyCode(email);
       if (success) {
         setState(() => _countdown = 60);
         _startCountdown();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('验证码已发送，请查收邮件')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('验证码已发送，请查收邮件')));
         }
       } else {
         setState(() => _errorMessage = '发送验证码失败，请稍后重试');
       }
     } catch (e) {
-      setState(() => _errorMessage = e.toString().replaceAll('Exception: ', ''));
+      setState(
+        () => _errorMessage = e.toString().replaceAll('Exception: ', ''),
+      );
     } finally {
       if (mounted) setState(() => _isSendingCode = false);
     }
@@ -188,24 +194,34 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     try {
       if (_isRegisterMode) {
-        await ref.read(authProvider.notifier).register(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-          name: _isSSPanel ? _nameController.text.trim() : null,
-          inviteCode: _inviteCodeController.text.trim().isEmpty ? null : _inviteCodeController.text.trim(),
-          emailCode: _emailCodeController.text.trim().isEmpty ? null : _emailCodeController.text.trim(),
-        );
+        await ref
+            .read(authProvider.notifier)
+            .register(
+              email: _emailController.text.trim(),
+              password: _passwordController.text,
+              name: _isSSPanel ? _nameController.text.trim() : null,
+              inviteCode: _inviteCodeController.text.trim().isEmpty
+                  ? null
+                  : _inviteCodeController.text.trim(),
+              emailCode: _emailCodeController.text.trim().isEmpty
+                  ? null
+                  : _emailCodeController.text.trim(),
+            );
       } else {
-        await ref.read(authProvider.notifier).login(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
+        await ref
+            .read(authProvider.notifier)
+            .login(
+              email: _emailController.text.trim(),
+              password: _passwordController.text,
+            );
       }
 
       await _fetchNodesAfterLogin();
       if (mounted) context.go('/dashboard');
     } catch (e) {
-      setState(() => _errorMessage = e.toString().replaceAll('Exception: ', ''));
+      setState(
+        () => _errorMessage = e.toString().replaceAll('Exception: ', ''),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -214,9 +230,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final size = MediaQuery.of(context).size;
     final config = BuildConfig.instance;
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       body: Stack(
@@ -230,7 +244,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
             ),
           ),
-          
+
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
@@ -256,10 +270,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           color: AppTheme.primaryColor,
                         ),
                       ),
-                    ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
-                    
+                    ).animate().scale(
+                      duration: 600.ms,
+                      curve: Curves.easeOutBack,
+                    ),
+
                     const SizedBox(height: 32),
-                    
+
                     Text(
                       _isRegisterMode ? 'Create Account' : 'Welcome Back',
                       style: GoogleFonts.outfit(
@@ -269,189 +286,235 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ),
                       textAlign: TextAlign.center,
                     ).animate().fadeIn().slideY(begin: 0.3, end: 0),
-                    
+
                     const SizedBox(height: 8),
-                    
+
                     Text(
-                      _isRegisterMode 
-                          ? 'Sign up to get started with ${config.appName}' 
-                          : 'Sign in to continue to ${config.appName}',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                      textAlign: TextAlign.center,
-                    ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.3, end: 0),
-                    
+                          _isRegisterMode
+                              ? 'Sign up to get started with ${config.appName}'
+                              : 'Sign in to continue to ${config.appName}',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                          textAlign: TextAlign.center,
+                        )
+                        .animate()
+                        .fadeIn(delay: 100.ms)
+                        .slideY(begin: 0.3, end: 0),
+
                     const SizedBox(height: 48),
 
                     // Form Card
                     Container(
-                      padding: const EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        color: theme.cardTheme.color,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: theme.dividerColor,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (_isRegisterMode && _isSSPanel) ...[
-                              _buildTextField(
-                                controller: _nameController,
-                                label: 'Username',
-                                icon: Icons.person_outline_rounded,
-                                validator: (v) => v!.isEmpty ? 'Required' : null,
+                          padding: const EdgeInsets.all(32),
+                          decoration: BoxDecoration(
+                            color: theme.cardTheme.color,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: theme.dividerColor),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
                               ),
-                              const SizedBox(height: 20),
                             ],
-
-                            _buildTextField(
-                              controller: _emailController,
-                              label: 'Email',
-                              icon: Icons.email_outlined,
-                              hint: _isRegisterMode ? _getEmailHint() : null,
-                              validator: (v) {
-                                if (v!.isEmpty) return 'Required';
-                                if (!v.contains('@')) return 'Invalid email';
-                                if (_isRegisterMode) return _validateEmailWhitelist(v);
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 20),
-
-                            if (_isRegisterMode && _isEmailVerifyRequired) ...[
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: _buildTextField(
-                                      controller: _emailCodeController,
-                                      label: 'Code',
-                                      icon: Icons.verified_outlined,
-                                      validator: (v) => v!.isEmpty ? 'Required' : null,
-                                    ),
+                          ),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (_isRegisterMode && _isSSPanel) ...[
+                                  _buildTextField(
+                                    controller: _nameController,
+                                    label: 'Username',
+                                    icon: Icons.person_outline_rounded,
+                                    validator: (v) =>
+                                        v!.isEmpty ? 'Required' : null,
                                   ),
-                                  const SizedBox(width: 12),
-                                  SizedBox(
-                                    height: 56,
-                                    child: OutlinedButton(
-                                      onPressed: (_countdown > 0 || _isSendingCode)
-                                          ? null
-                                          : _sendEmailCode,
-                                      style: OutlinedButton.styleFrom(
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(16),
+                                  const SizedBox(height: 20),
+                                ],
+
+                                _buildTextField(
+                                  controller: _emailController,
+                                  label: 'Email',
+                                  icon: Icons.email_outlined,
+                                  hint: _isRegisterMode
+                                      ? _getEmailHint()
+                                      : null,
+                                  validator: (v) {
+                                    if (v!.isEmpty) return 'Required';
+                                    if (!v.contains('@'))
+                                      return 'Invalid email';
+                                    if (_isRegisterMode)
+                                      return _validateEmailWhitelist(v);
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+
+                                if (_isRegisterMode &&
+                                    _isEmailVerifyRequired) ...[
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: _buildTextField(
+                                          controller: _emailCodeController,
+                                          label: 'Code',
+                                          icon: Icons.verified_outlined,
+                                          validator: (v) =>
+                                              v!.isEmpty ? 'Required' : null,
                                         ),
                                       ),
-                                      child: _isSendingCode
-                                          ? const SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(strokeWidth: 2),
-                                            )
-                                          : Text(_countdown > 0 ? '${_countdown}s' : 'Send'),
+                                      const SizedBox(width: 12),
+                                      SizedBox(
+                                        height: 56,
+                                        child: OutlinedButton(
+                                          onPressed:
+                                              (_countdown > 0 || _isSendingCode)
+                                              ? null
+                                              : _sendEmailCode,
+                                          style: OutlinedButton.styleFrom(
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                            ),
+                                          ),
+                                          child: _isSendingCode
+                                              ? const SizedBox(
+                                                  width: 20,
+                                                  height: 20,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                      ),
+                                                )
+                                              : Text(
+                                                  _countdown > 0
+                                                      ? '${_countdown}s'
+                                                      : 'Send',
+                                                ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                ],
+
+                                _buildTextField(
+                                  controller: _passwordController,
+                                  label: 'Password',
+                                  icon: Icons.lock_outline_rounded,
+                                  obscureText: _obscurePassword,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_outlined
+                                          : Icons.visibility_off_outlined,
+                                      color: theme.colorScheme.onSurface
+                                          .withOpacity(0.5),
                                     ),
+                                    onPressed: () => setState(
+                                      () =>
+                                          _obscurePassword = !_obscurePassword,
+                                    ),
+                                  ),
+                                  validator: (v) {
+                                    if (v!.isEmpty) return 'Required';
+                                    if (_isRegisterMode && v.length < 6)
+                                      return 'Min 6 chars';
+                                    return null;
+                                  },
+                                ),
+
+                                if (_isRegisterMode) ...[
+                                  const SizedBox(height: 20),
+                                  _buildTextField(
+                                    controller: _inviteCodeController,
+                                    label: _isInviteForceRequired
+                                        ? 'Invite Code (Required)'
+                                        : 'Invite Code (Optional)',
+                                    icon: Icons.card_giftcard_outlined,
+                                    validator: (v) {
+                                      if (_isInviteForceRequired &&
+                                          (v == null || v.isEmpty)) {
+                                        return 'Required';
+                                      }
+                                      return null;
+                                    },
                                   ),
                                 ],
-                              ),
-                              const SizedBox(height: 20),
-                            ],
 
-                            _buildTextField(
-                              controller: _passwordController,
-                              label: 'Password',
-                              icon: Icons.lock_outline_rounded,
-                              obscureText: _obscurePassword,
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined,
-                                  color: theme.colorScheme.onSurface.withOpacity(0.5),
-                                ),
-                                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                              ),
-                              validator: (v) {
-                                if (v!.isEmpty) return 'Required';
-                                if (_isRegisterMode && v.length < 6) return 'Min 6 chars';
-                                return null;
-                              },
-                            ),
-
-                            if (_isRegisterMode) ...[
-                              const SizedBox(height: 20),
-                              _buildTextField(
-                                controller: _inviteCodeController,
-                                label: _isInviteForceRequired ? 'Invite Code (Required)' : 'Invite Code (Optional)',
-                                icon: Icons.card_giftcard_outlined,
-                                validator: (v) {
-                                  if (_isInviteForceRequired && (v == null || v.isEmpty)) {
-                                    return 'Required';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ],
-
-                            if (_errorMessage != null) ...[
-                              const SizedBox(height: 24),
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.errorColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: AppTheme.errorColor.withOpacity(0.2),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.error_outline_rounded, color: AppTheme.errorColor, size: 20),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        _errorMessage!,
-                                        style: const TextStyle(color: AppTheme.errorColor, fontSize: 13),
+                                if (_errorMessage != null) ...[
+                                  const SizedBox(height: 24),
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.errorColor.withOpacity(
+                                        0.1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: AppTheme.errorColor.withOpacity(
+                                          0.2,
+                                        ),
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ).animate().fadeIn(),
-                            ],
-
-                            const SizedBox(height: 32),
-
-                            SizedBox(
-                              height: 56,
-                              child: ElevatedButton(
-                                onPressed: _isLoading ? null : _handleSubmit,
-                                child: _isLoading
-                                    ? const SizedBox(
-                                        height: 24,
-                                        width: 24,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.5,
-                                          color: Colors.white,
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.error_outline_rounded,
+                                          color: AppTheme.errorColor,
+                                          size: 20,
                                         ),
-                                      )
-                                    : Text(_isRegisterMode ? 'Create Account' : 'Sign In'),
-                              ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            _errorMessage!,
+                                            style: const TextStyle(
+                                              color: AppTheme.errorColor,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ).animate().fadeIn(),
+                                ],
+
+                                const SizedBox(height: 32),
+
+                                SizedBox(
+                                  height: 56,
+                                  child: ElevatedButton(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : _handleSubmit,
+                                    child: _isLoading
+                                        ? const SizedBox(
+                                            height: 24,
+                                            width: 24,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.5,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Text(
+                                            _isRegisterMode
+                                                ? 'Create Account'
+                                                : 'Sign In',
+                                          ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
-                    ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),
+                          ),
+                        )
+                        .animate()
+                        .fadeIn(delay: 200.ms)
+                        .slideY(begin: 0.1, end: 0),
 
                     const SizedBox(height: 24),
 
@@ -470,8 +533,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           ),
                           children: [
                             TextSpan(
-                              text: _isRegisterMode 
-                                  ? 'Already have an account? ' 
+                              text: _isRegisterMode
+                                  ? 'Already have an account? '
                                   : 'Don\'t have an account? ',
                             ),
                             TextSpan(

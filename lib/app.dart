@@ -374,7 +374,6 @@ class MainShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       body: Row(
@@ -384,9 +383,7 @@ class MainShell extends StatelessWidget {
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
               border: Border(
-                right: BorderSide(
-                  color: theme.dividerColor.withOpacity(0.1),
-                ),
+                right: BorderSide(color: theme.dividerColor.withOpacity(0.1)),
               ),
             ),
             child: Column(
@@ -421,7 +418,7 @@ class MainShell extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 32),
-                
+
                 // Navigation Items
                 Expanded(
                   child: Padding(
@@ -463,7 +460,7 @@ class MainShell extends StatelessWidget {
                     ),
                   ),
                 ),
-                
+
                 // User Profile / Bottom Actions could go here
                 const SizedBox(height: 24),
               ],
@@ -494,8 +491,8 @@ class MainShell extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected 
-                ? AppTheme.primaryColor.withOpacity(0.1) 
+            color: isSelected
+                ? AppTheme.primaryColor.withOpacity(0.1)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
@@ -504,8 +501,8 @@ class MainShell extends StatelessWidget {
               Icon(
                 isSelected ? activeIcon : icon,
                 size: 22,
-                color: isSelected 
-                    ? AppTheme.primaryColor 
+                color: isSelected
+                    ? AppTheme.primaryColor
                     : theme.colorScheme.onSurface.withOpacity(0.6),
               ),
               const SizedBox(width: 12),
@@ -514,8 +511,8 @@ class MainShell extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected 
-                      ? AppTheme.primaryColor 
+                  color: isSelected
+                      ? AppTheme.primaryColor
                       : theme.colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
