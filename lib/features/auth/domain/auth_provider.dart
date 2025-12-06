@@ -133,8 +133,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final config = BuildConfig.instance;
 
       // Set panel type from build config
-      final buildPanelType =
-          config.isV2board ? PanelType.v2board : PanelType.sspanel;
+      final buildPanelType = config.isV2board
+          ? PanelType.v2board
+          : PanelType.sspanel;
       state = state.copyWith(panelType: buildPanelType);
 
       VortexLogger.i('AuthNotifier: Panel type set to ${buildPanelType.name}');
@@ -146,15 +147,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         // 添加超时保护，避免卡死
         String? baseUrl;
         try {
-          baseUrl = await ApiManager.instance
-              .getActiveEndpointUrl()
-              .timeout(
-                const Duration(seconds: 15),
-                onTimeout: () {
-                  VortexLogger.w('AuthNotifier: API endpoint polling timed out');
-                  return null;
-                },
-              );
+          baseUrl = await ApiManager.instance.getActiveEndpointUrl().timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              VortexLogger.w('AuthNotifier: API endpoint polling timed out');
+              return null;
+            },
+          );
         } catch (e) {
           VortexLogger.e('AuthNotifier: Failed to get active endpoint', e);
         }
@@ -178,7 +177,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       VortexLogger.e('Failed to initialize from build config', e);
     } finally {
       _isInitialized = true;
-      VortexLogger.i('AuthNotifier: Initialization complete, isAuthenticated=${state.isAuthenticated}');
+      VortexLogger.i(
+        'AuthNotifier: Initialization complete, isAuthenticated=${state.isAuthenticated}',
+      );
       if (!state.isAuthenticated) {
         state = state.copyWith(isLoading: false);
       }

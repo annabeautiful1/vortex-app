@@ -179,9 +179,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     VortexLogger.i('SplashScreen: Opening debug panel');
     DevMode.instance.enable();
 
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const DebugPanel()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const DebugPanel()));
   }
 
   Future<void> _initializeApp() async {
