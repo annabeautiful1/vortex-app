@@ -158,7 +158,7 @@ class SettingsPage extends ConsumerWidget {
                   color: theme.colorScheme.onSurface,
                 ),
               ).animate().fadeIn().slideX(begin: -0.1, end: 0),
-              
+
               const SizedBox(height: 32),
 
               // General settings
@@ -391,7 +391,8 @@ class SettingsPage extends ConsumerWidget {
 
   void _showSubscriptionInfo(BuildContext context, WidgetRef ref) {
     final authState = ref.read(authProvider);
-    final subscribeUrl = authState.user?.subscription.subscriptionUrl ?? 'Not set';
+    final subscribeUrl =
+        authState.user?.subscription.subscriptionUrl ?? 'Not set';
 
     showDialog(
       context: context,
@@ -534,7 +535,7 @@ class _SettingsSection extends StatelessWidget {
   final int delay;
 
   const _SettingsSection({
-    required this.title, 
+    required this.title,
     required this.children,
     this.delay = 0,
   });
@@ -591,7 +592,7 @@ class _SettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -604,11 +605,13 @@ class _SettingsTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: (textColor ?? theme.colorScheme.primary).withOpacity(0.1),
+                  color: (textColor ?? theme.colorScheme.primary).withOpacity(
+                    0.1,
+                  ),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
-                  icon, 
+                  icon,
                   color: textColor ?? theme.colorScheme.primary,
                   size: 20,
                 ),

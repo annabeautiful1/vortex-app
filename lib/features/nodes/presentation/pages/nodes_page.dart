@@ -42,11 +42,16 @@ class NodesPage extends ConsumerWidget {
                       ).animate().fadeIn().slideX(begin: -0.1, end: 0),
                       const SizedBox(height: 4),
                       Text(
-                        '${nodesState.nodes.length} available servers',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
-                        ),
-                      ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1, end: 0),
+                            '${nodesState.nodes.length} available servers',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurface.withOpacity(
+                                0.6,
+                              ),
+                            ),
+                          )
+                          .animate()
+                          .fadeIn(delay: 100.ms)
+                          .slideX(begin: -0.1, end: 0),
                     ],
                   ),
                   Row(
@@ -65,19 +70,27 @@ class NodesPage extends ConsumerWidget {
                             if (nodesState.isTesting) {
                               ref.read(nodesProvider.notifier).stopTesting();
                             } else {
-                              ref.read(nodesProvider.notifier).testAllLatencies();
+                              ref
+                                  .read(nodesProvider.notifier)
+                                  .testAllLatencies();
                             }
                           },
                           icon: Icon(
-                            nodesState.isTesting ? Icons.stop_rounded : Icons.speed_rounded,
-                            color: nodesState.isTesting ? AppTheme.warningColor : theme.colorScheme.onSurface.withOpacity(0.7),
+                            nodesState.isTesting
+                                ? Icons.stop_rounded
+                                : Icons.speed_rounded,
+                            color: nodesState.isTesting
+                                ? AppTheme.warningColor
+                                : theme.colorScheme.onSurface.withOpacity(0.7),
                           ),
-                          tooltip: nodesState.isTesting ? 'Stop Test' : 'Test All',
+                          tooltip: nodesState.isTesting
+                              ? 'Stop Test'
+                              : 'Test All',
                         ),
                       ).animate().fadeIn(delay: 200.ms).scale(),
-                      
+
                       const SizedBox(width: 12),
-                      
+
                       // Refresh Button
                       Container(
                         decoration: BoxDecoration(
@@ -92,26 +105,37 @@ class NodesPage extends ConsumerWidget {
                             final authState = ref.read(authProvider);
                             final subscribeUrl =
                                 authState.user?.subscription.subscriptionUrl;
-                            if (subscribeUrl != null && subscribeUrl.isNotEmpty) {
+                            if (subscribeUrl != null &&
+                                subscribeUrl.isNotEmpty) {
                               try {
                                 await ref
                                     .read(nodesProvider.notifier)
                                     .refreshNodesFromUrl(subscribeUrl);
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Nodes updated successfully')),
+                                    const SnackBar(
+                                      content: Text(
+                                        'Nodes updated successfully',
+                                      ),
+                                    ),
                                   );
                                 }
                               } catch (e) {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Update failed: $e')),
+                                    SnackBar(
+                                      content: Text('Update failed: $e'),
+                                    ),
                                   );
                                 }
                               }
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Please login to get subscription')),
+                                const SnackBar(
+                                  content: Text(
+                                    'Please login to get subscription',
+                                  ),
+                                ),
                               );
                             }
                           },
@@ -203,16 +227,23 @@ class NodesPage extends ConsumerWidget {
               ),
             ).animate().fadeIn(delay: (index * 50).ms).slideX(),
             ...nodes.map(
-              (node) => _NodeTile(
-                node: node,
-                isConnected: connectionState.connectedNode?.id == node.id,
-                latency: nodesState.latencies[node.id],
-                isTesting: nodesState.isTesting,
-                hasTested: nodesState.latencies.containsKey(node.id),
-                onTap: () {
-                  ref.read(connectionProvider.notifier).switchNode(node);
-                },
-              ).animate().fadeIn(delay: (index * 50 + 100).ms).slideY(begin: 0.1, end: 0),
+              (node) =>
+                  _NodeTile(
+                        node: node,
+                        isConnected:
+                            connectionState.connectedNode?.id == node.id,
+                        latency: nodesState.latencies[node.id],
+                        isTesting: nodesState.isTesting,
+                        hasTested: nodesState.latencies.containsKey(node.id),
+                        onTap: () {
+                          ref
+                              .read(connectionProvider.notifier)
+                              .switchNode(node);
+                        },
+                      )
+                      .animate()
+                      .fadeIn(delay: (index * 50 + 100).ms)
+                      .slideY(begin: 0.1, end: 0),
             ),
             const SizedBox(height: 24),
           ],
@@ -242,17 +273,17 @@ class _NodeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isConnected 
-            ? AppTheme.primaryColor.withOpacity(0.05) 
+        color: isConnected
+            ? AppTheme.primaryColor.withOpacity(0.05)
             : theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isConnected 
-              ? AppTheme.primaryColor.withOpacity(0.2) 
+          color: isConnected
+              ? AppTheme.primaryColor.withOpacity(0.2)
               : theme.dividerColor.withOpacity(0.05),
         ),
       ),
@@ -272,17 +303,23 @@ class _NodeTile extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isConnected
                         ? AppTheme.primaryColor.withOpacity(0.1)
-                        : theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                        : theme.colorScheme.surfaceContainerHighest.withOpacity(
+                            0.3,
+                          ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    isConnected ? Icons.check_circle_rounded : Icons.dns_rounded,
-                    color: isConnected ? AppTheme.primaryColor : theme.colorScheme.onSurfaceVariant,
+                    isConnected
+                        ? Icons.check_circle_rounded
+                        : Icons.dns_rounded,
+                    color: isConnected
+                        ? AppTheme.primaryColor
+                        : theme.colorScheme.onSurfaceVariant,
                     size: 24,
                   ),
                 ),
                 const SizedBox(width: 16),
-                
+
                 // Info
                 Expanded(
                   child: Column(
@@ -295,7 +332,9 @@ class _NodeTile extends StatelessWidget {
                               node.name,
                               style: TextStyle(
                                 fontSize: 16,
-                                fontWeight: isConnected ? FontWeight.w600 : FontWeight.w500,
+                                fontWeight: isConnected
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
                                 color: theme.colorScheme.onSurface,
                               ),
                               maxLines: 1,
@@ -304,7 +343,10 @@ class _NodeTile extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           if (node.multiplier != 1.0)
-                            _Tag(label: '${node.multiplier}x', color: AppTheme.warningColor),
+                            _Tag(
+                              label: '${node.multiplier}x',
+                              color: AppTheme.warningColor,
+                            ),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -317,18 +359,23 @@ class _NodeTile extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          ...node.tags.take(3).map(
-                            (tag) => Padding(
-                              padding: const EdgeInsets.only(right: 4),
-                              child: _Tag(label: _getTagLabel(tag), color: _getTagColor(tag)),
-                            ),
-                          ),
+                          ...node.tags
+                              .take(3)
+                              .map(
+                                (tag) => Padding(
+                                  padding: const EdgeInsets.only(right: 4),
+                                  child: _Tag(
+                                    label: _getTagLabel(tag),
+                                    color: _getTagColor(tag),
+                                  ),
+                                ),
+                              ),
                         ],
                       ),
                     ],
                   ),
                 ),
-                
+
                 // Latency
                 _buildLatencyWidget(theme),
               ],
