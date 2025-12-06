@@ -151,7 +151,7 @@ class VpnService {
             const Duration(seconds: 5),
             onTimeout: () {
               VortexLogger.w('stopVpn timed out');
-              return;
+              return false;
             },
           ),
 
@@ -162,7 +162,7 @@ class VpnService {
               const Duration(seconds: 3),
               onTimeout: () {
                 VortexLogger.w('setSystemProxy(false) timed out');
-                return;
+                return false;
               },
             ),
 
@@ -171,7 +171,7 @@ class VpnService {
           const Duration(seconds: 5),
           onTimeout: () {
             VortexLogger.w('stopCore timed out');
-            return;
+            return false;
           },
         ),
       ]);
