@@ -331,27 +331,6 @@ jobs:
               end;
             end;
           end;
-
-          function InitializeSetup(): Boolean;
-          var
-            V: Integer;
-            sMsg: String;
-          begin
-            Result := True;
-            if IsUpgrade() then begin
-              sMsg := 'Detected an existing Vortex installation.' + #13#10 + #13#10 +
-                      'Click Yes to uninstall the old version first (recommended).' + #13#10 +
-                      'Click No to overwrite the existing installation.' + #13#10 +
-                      'Click Cancel to abort.';
-              V := MsgBox(sMsg, mbConfirmation, MB_YESNOCANCEL);
-              if V = IDCANCEL then begin
-                Result := False;
-              end else if V = IDYES then begin
-                UnInstallOldVersion();
-              end;
-              // If IDNO, just continue with overwrite installation
-            end;
-          end;
           "@ | Out-File -FilePath "installer.iss" -Encoding UTF8
 
       - name: Build Installer

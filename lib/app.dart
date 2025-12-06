@@ -226,8 +226,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         await _loadNodesIfLoggedIn();
       }
 
-      // 额外等待一下让路由刷新
-      await Future.delayed(const Duration(milliseconds: 100));
+      // 路由刷新 - 强制触发跳转
+      VortexLogger.i('SplashScreen: Triggering navigation...');
+      if (mounted) {
+        final authState = ref.read(authProvider);
+        if (authState.isAuthenticated) {
+          VortexLogger.i('SplashScreen: Navigating to dashboard');
+          context.go('/dashboard');
+        } else {
+          VortexLogger.i('SplashScreen: Navigating to login');
+          context.go('/login');
+        }
+      }
     } catch (e, stack) {
       VortexLogger.e('SplashScreen: Initialization error', e, stack);
       if (mounted) {
