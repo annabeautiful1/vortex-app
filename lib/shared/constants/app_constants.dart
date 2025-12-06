@@ -20,6 +20,8 @@ class AppConstants {
   static const String settingsKey = 'app_settings';
   static const String themeKey = 'theme_mode';
   static const String apiEndpointsKey = 'api_endpoints';
+  static const String savedEmailKey = 'saved_email';
+  static const String savedPasswordKey = 'saved_password';
 
   // Panel Types
   static const String panelSSPanel = 'sspanel';

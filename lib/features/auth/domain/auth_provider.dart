@@ -248,39 +248,139 @@ class AuthNotifier extends StateNotifier<AuthState> {
           'Restoring session: panelType=$panelType, baseUrl=$effectiveBaseUrl',
         );
 
-        if (panelType == PanelType.v2board) {
-          _v2boardApi = V2boardApi(baseUrl: effectiveBaseUrl);
-          _v2boardApi!.setAuthData(authData);
-          await _fetchV2boardUserInfo().timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              VortexLogger.w('V2board user info fetch timed out');
-              throw Exception('获取用户信息超时');
-            },
-          );
-        } else {
-          _sspanelApi = SSPanelApi(baseUrl: effectiveBaseUrl);
-          _sspanelCookies = authData.split('|||');
-          _sspanelApi!.setCookies(_sspanelCookies!);
-          await _fetchSSPanelUserInfo().timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              VortexLogger.w('SSPanel user info fetch timed out');
-              throw Exception('获取用户信息超时');
-            },
-          );
-        }
+        try {
+          if (panelType == PanelType.v2board) {
+            _v2boardApi = V2boardApi(baseUrl: effectiveBaseUrl);
+            _v2boardApi!.setAuthData(authData);
+            await _fetchV2boardUserInfo().timeout(
+              const Duration(seconds: 15),
+              onTimeout: () {
+                VortexLogger.w('V2board user info fetch timed out');
+                throw Exception('获取用户信息超时');
+              },
+            );
+          } else {
+            _sspanelApi = SSPanelApi(baseUrl: effectiveBaseUrl);
+            _sspanelCookies = authData.split('|||');
+            _sspanelApi!.setCookies(_sspanelCookies!);
+            await _fetchSSPanelUserInfo().timeout(
+              const Duration(seconds: 15),
+              onTimeout: () {
+                VortexLogger.w('SSPanel user info fetch timed out');
+                throw Exception('获取用户信息超时');
+              },
+            );
+          }
 
-        state = state.copyWith(panelType: panelType, baseUrl: effectiveBaseUrl);
-        VortexLogger.i('Session restored successfully');
+          state = state.copyWith(
+            panelType: panelType,
+            baseUrl: effectiveBaseUrl,
+          );
+          VortexLogger.i('Session restored successfully');
+        } catch (e) {
+          VortexLogger.w(
+            'Token validation failed, trying auto-login with saved credentials',
+          );
+          // Token 验证失败，尝试使用保存的凭据重新登录
+          await _tryAutoLogin(effectiveBaseUrl, panelType);
+        }
       } else {
         VortexLogger.i('No stored session found');
+        // 没有 token，尝试自动登录
+        await _tryAutoLoginFromScratch();
       }
     } catch (e) {
       VortexLogger.e('Failed to restore session', e);
-      // Clear invalid session data
+      // Clear invalid session data but keep credentials
       await StorageService.instance.deleteSecure(AppConstants.tokenKey);
       state = state.copyWith(isAuthenticated: false, isLoading: false);
+    }
+  }
+
+  /// 尝试使用保存的凭据自动登录
+  Future<void> _tryAutoLogin(String baseUrl, PanelType panelType) async {
+    final savedEmail = await StorageService.instance.getSecure(
+      AppConstants.savedEmailKey,
+    );
+    final savedPassword = await StorageService.instance.getSecure(
+      AppConstants.savedPasswordKey,
+    );
+
+    if (savedEmail != null &&
+        savedEmail.isNotEmpty &&
+        savedPassword != null &&
+        savedPassword.isNotEmpty) {
+      VortexLogger.i('Attempting auto-login with saved credentials...');
+      try {
+        await _initApiClient(baseUrl, panelType);
+        state = state.copyWith(baseUrl: baseUrl, panelType: panelType);
+
+        if (panelType == PanelType.v2board) {
+          await _loginV2board(email: savedEmail, password: savedPassword);
+        } else {
+          await _loginSSPanel(email: savedEmail, password: savedPassword);
+        }
+        VortexLogger.i('Auto-login successful');
+      } catch (e) {
+        VortexLogger.e('Auto-login failed', e);
+        state = state.copyWith(isAuthenticated: false, isLoading: false);
+      }
+    } else {
+      VortexLogger.i('No saved credentials for auto-login');
+      state = state.copyWith(isAuthenticated: false, isLoading: false);
+    }
+  }
+
+  /// 从头开始尝试自动登录
+  Future<void> _tryAutoLoginFromScratch() async {
+    final savedEmail = await StorageService.instance.getSecure(
+      AppConstants.savedEmailKey,
+    );
+    final savedPassword = await StorageService.instance.getSecure(
+      AppConstants.savedPasswordKey,
+    );
+
+    if (savedEmail != null &&
+        savedEmail.isNotEmpty &&
+        savedPassword != null &&
+        savedPassword.isNotEmpty) {
+      VortexLogger.i(
+        'No token but have saved credentials, attempting login...',
+      );
+
+      // 获取 base URL
+      String? baseUrl = await StorageService.instance.getSecure(
+        AppConstants.apiEndpointsKey,
+      );
+      if (baseUrl == null || baseUrl.isEmpty) {
+        try {
+          baseUrl = await ApiManager.instance.getActiveEndpointUrl().timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => null,
+          );
+        } catch (_) {}
+      }
+
+      if (baseUrl != null && baseUrl.isNotEmpty) {
+        final config = BuildConfig.instance;
+        final panelType = config.isV2board
+            ? PanelType.v2board
+            : PanelType.sspanel;
+
+        try {
+          await _initApiClient(baseUrl, panelType);
+          state = state.copyWith(baseUrl: baseUrl, panelType: panelType);
+
+          if (panelType == PanelType.v2board) {
+            await _loginV2board(email: savedEmail, password: savedPassword);
+          } else {
+            await _loginSSPanel(email: savedEmail, password: savedPassword);
+          }
+          VortexLogger.i('Auto-login from scratch successful');
+        } catch (e) {
+          VortexLogger.e('Auto-login from scratch failed', e);
+        }
+      }
     }
   }
 
@@ -457,6 +557,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       authResponse.authData,
     );
 
+    // Save credentials for auto-login (secure storage)
+    await StorageService.instance.setSecure(AppConstants.savedEmailKey, email);
+    await StorageService.instance.setSecure(
+      AppConstants.savedPasswordKey,
+      password,
+    );
+
     // Fetch user info
     await _fetchV2boardUserInfo();
   }
@@ -478,6 +585,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       AppConstants.tokenKey,
       authResponse.cookies.join('|||'),
     );
+
+    // Save credentials for auto-login (secure storage)
+    await StorageService.instance.setSecure(AppConstants.savedEmailKey, email);
+    await StorageService.instance.setSecure(
+      AppConstants.savedPasswordKey,
+      password,
+    );
+
     _sspanelApi!.setCookies(authResponse.cookies);
 
     // Fetch user info
@@ -662,6 +777,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   /// Logout
+  /// Note: This only clears the token, not the saved credentials.
+  /// Saved credentials are kept for auto-login after app updates.
+  /// To clear credentials completely, use clearSavedCredentials().
   Future<void> logout() async {
     await StorageService.instance.deleteSecure(AppConstants.tokenKey);
     _v2boardApi?.clearAuthData();
@@ -673,6 +791,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
       baseUrl: state.baseUrl,
     );
     VortexLogger.i('User logged out');
+  }
+
+  /// Clear saved credentials completely (for "forget me" functionality)
+  Future<void> clearSavedCredentials() async {
+    await StorageService.instance.deleteSecure(AppConstants.savedEmailKey);
+    await StorageService.instance.deleteSecure(AppConstants.savedPasswordKey);
+    VortexLogger.i('Saved credentials cleared');
+  }
+
+  /// Get saved email (for auto-fill in login form)
+  Future<String?> getSavedEmail() async {
+    return await StorageService.instance.getSecure(AppConstants.savedEmailKey);
   }
 
   /// Refresh user info

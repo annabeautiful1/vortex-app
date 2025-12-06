@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'shared/themes/app_theme.dart';
+import 'shared/services/tray_service.dart';
 import 'core/config/build_config.dart';
 import 'core/utils/logger.dart';
 import 'core/utils/dev_mode.dart';
@@ -110,6 +111,20 @@ class _VortexAppState extends ConsumerState<VortexApp> {
   void initState() {
     super.initState();
     _router = _createRouter(ref);
+    _setupTrayCallbacks();
+  }
+
+  /// 设置托盘回调，确保托盘和设置页面状态同步
+  void _setupTrayCallbacks() {
+    TrayService.instance.onTunModeChanged = (enabled) {
+      // 从托盘更新设置状态
+      ref.read(settingsProvider.notifier).setTunModeFromTray(enabled);
+    };
+
+    TrayService.instance.onSystemProxyChanged = (enabled) {
+      // 系统代理变更回调（如果需要）
+      VortexLogger.i('System proxy changed from tray: $enabled');
+    };
   }
 
   @override

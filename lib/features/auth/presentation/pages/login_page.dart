@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -13,6 +14,29 @@ import '../../../../core/utils/logger.dart';
 import '../../../debug/presentation/pages/debug_panel.dart';
 import '../../../nodes/domain/nodes_provider.dart';
 import '../../../dashboard/domain/connection_provider.dart';
+
+/// 禁止输入空格的 TextInputFormatter
+class NoSpaceInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // 移除所有空格
+    final newText = newValue.text.replaceAll(' ', '');
+    if (newText == newValue.text) {
+      return newValue;
+    }
+    // 调整光标位置
+    final diff = newValue.text.length - newText.length;
+    return TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(
+        offset: (newValue.selection.baseOffset - diff).clamp(0, newText.length),
+      ),
+    );
+  }
+}
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -347,6 +371,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     controller: _emailController,
                                     label: '邮箱',
                                     icon: Icons.email_outlined,
+                                    noSpaces: true,
                                     hint: _isRegisterMode
                                         ? _getEmailHint()
                                         : null,
@@ -416,6 +441,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     label: '密码',
                                     icon: Icons.lock_outline_rounded,
                                     obscureText: _obscurePassword,
+                                    noSpaces: true,
                                     suffixIcon: IconButton(
                                       icon: Icon(
                                         _obscurePassword
@@ -571,12 +597,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     Widget? suffixIcon,
     String? Function(String?)? validator,
     String? hint,
+    bool noSpaces = false,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
       validator: validator,
       style: const TextStyle(fontWeight: FontWeight.w500),
+      inputFormatters: noSpaces ? [NoSpaceInputFormatter()] : null,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,

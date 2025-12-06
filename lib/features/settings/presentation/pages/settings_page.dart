@@ -109,6 +109,14 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     // TODO: Implement TUN mode toggle
   }
 
+  /// 从托盘更新 TUN 模式（不再调用 TrayService，避免循环）
+  Future<void> setTunModeFromTray(bool value) async {
+    state = state.copyWith(tunMode: value);
+    await StorageService.instance.setBool('tun_mode', value);
+    VortexLogger.i('TUN mode set from tray to: $value');
+    // TODO: Implement TUN mode toggle
+  }
+
   Future<void> setAllowLan(bool value) async {
     state = state.copyWith(allowLan: value);
     await StorageService.instance.setBool('allow_lan', value);
