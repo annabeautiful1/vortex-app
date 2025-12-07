@@ -64,6 +64,9 @@ class PlatformChannelService {
   VpnState _currentState = VpnState.disconnected;
   TrafficStats _trafficStats = TrafficStats();
 
+  /// 静默模式 - 不广播状态变化（用于延迟测试的临时核心）
+  bool _silentMode = false;
+
   // 状态流控制器
   final _stateController = StreamController<VpnState>.broadcast();
   final _trafficController = StreamController<TrafficStats>.broadcast();
@@ -86,6 +89,15 @@ class PlatformChannelService {
 
   /// 是否已连接
   bool get isConnected => _currentState == VpnState.connected;
+
+  /// 设置静默模式（延迟测试时使用，不广播状态变化）
+  void setSilentMode(bool silent) {
+    _silentMode = silent;
+    VortexLogger.d('Platform channel silent mode: $silent');
+  }
+
+  /// 获取静默模式状态
+  bool get isSilentMode => _silentMode;
 
   /// 初始化平台通道
   Future<void> init() async {
@@ -208,7 +220,10 @@ class PlatformChannelService {
   Future<bool> startCore(String configPath) async {
     try {
       _currentState = VpnState.connecting;
-      _stateController.add(_currentState);
+      // 静默模式下不广播状态变化
+      if (!_silentMode) {
+        _stateController.add(_currentState);
+      }
 
       final result = await _channel.invokeMethod('startCore', {
         'configPath': configPath,
@@ -223,7 +238,9 @@ class PlatformChannelService {
     } on PlatformException catch (e) {
       VortexLogger.e('Failed to start core: ${e.message}');
       _currentState = VpnState.error;
-      _stateController.add(_currentState);
+      if (!_silentMode) {
+        _stateController.add(_currentState);
+      }
       return false;
     }
   }
@@ -232,7 +249,10 @@ class PlatformChannelService {
   Future<bool> stopCore() async {
     try {
       _currentState = VpnState.disconnecting;
-      _stateController.add(_currentState);
+      // 静默模式下不广播状态变化
+      if (!_silentMode) {
+        _stateController.add(_currentState);
+      }
 
       // 添加超时保护，防止原生代码卡住导致 UI 卡死
       final result = await _channel
@@ -247,9 +267,12 @@ class PlatformChannelService {
 
       if (result == true) {
         _currentState = VpnState.disconnected;
-        _stateController.add(_currentState);
-        _trafficStats = TrafficStats();
-        _trafficController.add(_trafficStats);
+        // 静默模式下不广播状态变化
+        if (!_silentMode) {
+          _stateController.add(_currentState);
+          _trafficStats = TrafficStats();
+          _trafficController.add(_trafficStats);
+        }
         VortexLogger.i('Core stopped');
         return true;
       }
@@ -258,13 +281,17 @@ class PlatformChannelService {
       VortexLogger.e('Failed to stop core: ${e.message}');
       // 即使失败也更新状态，防止卡死
       _currentState = VpnState.disconnected;
-      _stateController.add(_currentState);
+      if (!_silentMode) {
+        _stateController.add(_currentState);
+      }
       return false;
     } catch (e) {
       // 捕获所有其他异常（包括 TimeoutException）
       VortexLogger.e('stopCore exception: $e');
       _currentState = VpnState.disconnected;
-      _stateController.add(_currentState);
+      if (!_silentMode) {
+        _stateController.add(_currentState);
+      }
       return false;
     }
   }

@@ -295,6 +295,9 @@ class VpnService {
       VortexLogger.i('Starting temp core for delay test...');
       _isTempCoreRunning = true;
 
+      // 启用静默模式，防止状态变化影响主 UI
+      _platformChannel.setSilentMode(true);
+
       // 生成包含所有节点的临时配置
       final configPath = await _writeDelayTestConfig();
 
@@ -303,6 +306,7 @@ class VpnService {
       if (!started) {
         VortexLogger.w('Failed to start temp core for delay test');
         _isTempCoreRunning = false;
+        _platformChannel.setSilentMode(false);
         return -1;
       }
 
@@ -315,6 +319,7 @@ class VpnService {
         VortexLogger.w('Temp core health check failed');
         await _platformChannel.stopCore();
         _isTempCoreRunning = false;
+        _platformChannel.setSilentMode(false);
         return -1;
       }
 
@@ -347,6 +352,8 @@ class VpnService {
         VortexLogger.e('Failed to stop temp core', e);
       }
       _isTempCoreRunning = false;
+      // 关闭静默模式
+      _platformChannel.setSilentMode(false);
     }
   }
 
@@ -462,12 +469,16 @@ class VpnService {
       VortexLogger.i('Starting temp core for batch delay test...');
       _isTempCoreRunning = true;
 
+      // 启用静默模式，防止状态变化影响主 UI
+      _platformChannel.setSilentMode(true);
+
       try {
         final configPath = await _writeDelayTestConfig();
         final started = await _platformChannel.startCore(configPath);
         if (!started) {
           VortexLogger.w('Failed to start temp core');
           _isTempCoreRunning = false;
+          _platformChannel.setSilentMode(false);
           return results;
         }
 
@@ -479,11 +490,13 @@ class VpnService {
           VortexLogger.w('Temp core health check failed');
           await _platformChannel.stopCore();
           _isTempCoreRunning = false;
+          _platformChannel.setSilentMode(false);
           return results;
         }
       } catch (e) {
         VortexLogger.e('Failed to start temp core for batch test', e);
         _isTempCoreRunning = false;
+        _platformChannel.setSilentMode(false);
         return results;
       }
     }
@@ -526,6 +539,8 @@ class VpnService {
         VortexLogger.e('Failed to stop core after batch test', e);
       }
       _isTempCoreRunning = false;
+      // 关闭静默模式
+      _platformChannel.setSilentMode(false);
     }
 
     VortexLogger.i('Batch delay test completed: ${results.length} nodes');
