@@ -514,7 +514,17 @@ class VpnService {
     // 如果是临时启动的核心，停止它
     if (needStopCore && _isTempCoreRunning) {
       VortexLogger.i('Stopping temp core after batch test...');
-      await _platformChannel.stopCore();
+      try {
+        await _platformChannel.stopCore().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            VortexLogger.w('Stop core timed out after batch test');
+            return false;
+          },
+        );
+      } catch (e) {
+        VortexLogger.e('Failed to stop core after batch test', e);
+      }
       _isTempCoreRunning = false;
     }
 

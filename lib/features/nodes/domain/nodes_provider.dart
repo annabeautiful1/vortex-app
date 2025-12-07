@@ -166,40 +166,58 @@ class NodesNotifier extends StateNotifier<NodesState> {
 
       // 使用 VpnService 的真实延迟测试
       // 如果核心未运行，会自动临时启动
-      await VpnService.instance.testAllNodesDelay(
-        timeout: 10000,
-        onProgress: (completed, total, nodeId, delay) {
-          // 实时更新单个节点的延迟
-          final newLatencies = Map<String, int?>.from(state.latencies);
-          newLatencies[nodeId] = delay > 0 ? delay : null;
-          state = state.copyWith(latencies: newLatencies);
+      // 添加整体超时保护，避免无限等待
+      await VpnService.instance
+          .testAllNodesDelay(
+            timeout: 10000,
+            onProgress: (completed, total, nodeId, delay) {
+              // 实时更新单个节点的延迟
+              final newLatencies = Map<String, int?>.from(state.latencies);
+              newLatencies[nodeId] = delay > 0 ? delay : null;
+              state = state.copyWith(latencies: newLatencies);
 
-          VortexLogger.d(
-            'Delay test progress: $completed/$total, $nodeId: ${delay}ms',
+              VortexLogger.d(
+                'Delay test progress: $completed/$total, $nodeId: ${delay}ms',
+              );
+            },
+          )
+          .timeout(
+            const Duration(minutes: 3),
+            onTimeout: () {
+              VortexLogger.w('Batch delay test overall timeout');
+              return {};
+            },
           );
-        },
-      );
-
-      // 停止临时核心（如果有）
-      await VpnService.instance.stopTempCoreIfRunning();
 
       VortexLogger.i(
         'All latency tests completed: ${state.latencies.length} nodes',
       );
     } catch (e) {
       VortexLogger.e('Failed to test latencies', e);
-      // 确保停止临时核心
-      await VpnService.instance.stopTempCoreIfRunning();
     } finally {
+      // 确保无论如何都会重置测试状态
       state = state.copyWith(isTesting: false);
+      // 异步停止临时核心，不阻塞 UI
+      _stopTempCoreAsync();
     }
+  }
+
+  /// 异步停止临时核心，不阻塞调用者
+  void _stopTempCoreAsync() {
+    Future(() async {
+      try {
+        await VpnService.instance.stopTempCoreIfRunning();
+      } catch (e) {
+        VortexLogger.e('Failed to stop temp core async', e);
+      }
+    });
   }
 
   /// 停止测速
   void stopTesting() {
     state = state.copyWith(isTesting: false);
-    // 停止临时核心
-    VpnService.instance.stopTempCoreIfRunning();
+    // 异步停止临时核心
+    _stopTempCoreAsync();
   }
 
   /// 测试单个节点延迟（真实全链路延迟）

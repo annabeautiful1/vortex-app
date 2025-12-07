@@ -34,6 +34,12 @@ class QuickActions extends ConsumerWidget {
               label: '公告',
               onTap: () => _showAnnouncements(context, ref),
             ),
+            _QuickActionButton(
+              icon: Icons.logout,
+              label: '退出登录',
+              color: Colors.red,
+              onTap: () => _showLogoutDialog(context, ref),
+            ),
           ],
         ),
       ],
@@ -48,21 +54,51 @@ class QuickActions extends ConsumerWidget {
       builder: (context) => _AnnouncementDialog(authNotifier: authNotifier),
     );
   }
+
+  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('退出登录'),
+        content: const Text('确定要退出登录吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await ref.read(authProvider.notifier).logout();
+              if (context.mounted) {
+                context.go('/login');
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('退出'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _QuickActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final Color? color;
 
   const _QuickActionButton({
     required this.icon,
     required this.label,
     required this.onTap,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    final iconColor = color ?? AppTheme.primaryColor;
     return Material(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       borderRadius: BorderRadius.circular(12),
@@ -75,7 +111,7 @@ class _QuickActionButton extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 28, color: AppTheme.primaryColor),
+              Icon(icon, size: 28, color: iconColor),
               const SizedBox(height: 8),
               Text(
                 label,
