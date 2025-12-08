@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/proxy_node.dart';
@@ -164,17 +166,35 @@ class NodesNotifier extends StateNotifier<NodesState> {
       // 确保 VpnService 有节点列表
       VpnService.instance.setNodes(state.nodes);
 
+      // 检查是否已连接 - 如果未连接，使用 TCP ping 代替
+      if (!VpnService.instance.isConnected) {
+        VortexLogger.i('VPN not connected, using TCP ping for latency test');
+        await _testLatenciesWithTcpPing();
+        return;
+      }
+
+      // 使用批量收集模式，减少状态更新频率
+      final allLatencies = <String, int?>{};
+      int lastUpdateCount = 0;
+      const updateInterval = 5; // 每5个节点更新一次UI
+
       // 使用 VpnService 的真实延迟测试
-      // 如果核心未运行，会自动临时启动
-      // 添加整体超时保护，避免无限等待
       await VpnService.instance
           .testAllNodesDelay(
             timeout: 10000,
             onProgress: (completed, total, nodeId, delay) {
-              // 实时更新单个节点的延迟
-              final newLatencies = Map<String, int?>.from(state.latencies);
-              newLatencies[nodeId] = delay > 0 ? delay : null;
-              state = state.copyWith(latencies: newLatencies);
+              // 收集延迟结果
+              allLatencies[nodeId] = delay > 0 ? delay : null;
+
+              // 每隔 updateInterval 个节点或最后一个时才更新 UI
+              if (completed - lastUpdateCount >= updateInterval ||
+                  completed == total) {
+                lastUpdateCount = completed;
+                // 批量更新状态，减少UI重建次数
+                state = state.copyWith(
+                  latencies: Map<String, int?>.from(allLatencies),
+                );
+              }
 
               VortexLogger.d(
                 'Delay test progress: $completed/$total, $nodeId: ${delay}ms',
@@ -189,6 +209,9 @@ class NodesNotifier extends StateNotifier<NodesState> {
             },
           );
 
+      // 最终更新，确保所有结果都反映到UI
+      state = state.copyWith(latencies: Map<String, int?>.from(allLatencies));
+
       VortexLogger.i(
         'All latency tests completed: ${state.latencies.length} nodes',
       );
@@ -199,6 +222,72 @@ class NodesNotifier extends StateNotifier<NodesState> {
       state = state.copyWith(isTesting: false);
       // 异步停止临时核心，不阻塞 UI
       _stopTempCoreAsync();
+    }
+  }
+
+  /// 使用 TCP ping 测试延迟（不需要启动核心）
+  Future<void> _testLatenciesWithTcpPing() async {
+    final allLatencies = <String, int?>{};
+    int completed = 0;
+    final total = state.nodes.length;
+    int lastUpdateCount = 0;
+    const updateInterval = 5;
+
+    // 并发限制为 10，TCP ping 很轻量
+    const batchSize = 10;
+
+    for (var i = 0; i < state.nodes.length; i += batchSize) {
+      final batch = state.nodes.skip(i).take(batchSize).toList();
+
+      final futures = batch.map((node) async {
+        final delay = await _tcpPing(node.server, node.port);
+        return MapEntry(node.id, delay);
+      });
+
+      final batchResults = await Future.wait(futures);
+      for (final entry in batchResults) {
+        allLatencies[entry.key] = entry.value;
+        completed++;
+
+        // 批量更新
+        if (completed - lastUpdateCount >= updateInterval ||
+            completed == total) {
+          lastUpdateCount = completed;
+          state = state.copyWith(
+            latencies: Map<String, int?>.from(allLatencies),
+          );
+        }
+      }
+
+      // 让出一点时间给 UI 线程
+      await Future.delayed(const Duration(milliseconds: 10));
+    }
+
+    state = state.copyWith(
+      latencies: Map<String, int?>.from(allLatencies),
+      isTesting: false,
+    );
+
+    VortexLogger.i('TCP ping test completed: ${allLatencies.length} nodes');
+  }
+
+  /// TCP ping 单个节点
+  Future<int?> _tcpPing(String host, int port) async {
+    final stopwatch = Stopwatch()..start();
+    Socket? socket;
+
+    try {
+      socket = await Socket.connect(
+        host,
+        port,
+        timeout: const Duration(seconds: 5),
+      );
+      stopwatch.stop();
+      return stopwatch.elapsedMilliseconds;
+    } catch (e) {
+      return null; // 超时或连接失败
+    } finally {
+      socket?.destroy();
     }
   }
 

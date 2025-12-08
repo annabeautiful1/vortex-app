@@ -463,18 +463,27 @@ class VpnService {
       return results;
     }
 
+    VortexLogger.i('testAllNodesDelay: Starting with ${_nodes.length} nodes');
+
     // 确保核心运行中
     final needStopCore = !isConnected && !_isTempCoreRunning;
     if (!isConnected && !_isTempCoreRunning) {
-      VortexLogger.i('Starting temp core for batch delay test...');
+      VortexLogger.i('testAllNodesDelay: Need to start temp core...');
       _isTempCoreRunning = true;
 
       // 启用静默模式，防止状态变化影响主 UI
       _platformChannel.setSilentMode(true);
+      VortexLogger.i('testAllNodesDelay: Silent mode enabled');
 
       try {
+        VortexLogger.i('testAllNodesDelay: Writing delay test config...');
         final configPath = await _writeDelayTestConfig();
+        VortexLogger.i('testAllNodesDelay: Config written to $configPath');
+
+        VortexLogger.i('testAllNodesDelay: Starting core...');
         final started = await _platformChannel.startCore(configPath);
+        VortexLogger.i('testAllNodesDelay: Core started = $started');
+
         if (!started) {
           VortexLogger.w('Failed to start temp core');
           _isTempCoreRunning = false;
@@ -483,9 +492,13 @@ class VpnService {
         }
 
         // 等待核心启动
+        VortexLogger.i('testAllNodesDelay: Waiting for core to initialize...');
         await Future.delayed(const Duration(milliseconds: 1500));
 
+        VortexLogger.i('testAllNodesDelay: Checking core health...');
         final isHealthy = await _mihomoService.healthCheck();
+        VortexLogger.i('testAllNodesDelay: Core healthy = $isHealthy');
+
         if (!isHealthy) {
           VortexLogger.w('Temp core health check failed');
           await _platformChannel.stopCore();
@@ -501,32 +514,56 @@ class VpnService {
       }
     }
 
-    // 批量测试（并发限制为 5，避免请求过多）
-    const batchSize = 5;
+    VortexLogger.i('testAllNodesDelay: Starting batch delay tests...');
+
+    // 批量测试（并发限制为 3，减少负载）
+    const batchSize = 3;
     int completed = 0;
     final total = _nodes.length;
 
     for (var i = 0; i < _nodes.length; i += batchSize) {
       final batch = _nodes.skip(i).take(batchSize).toList();
-      final futures = batch.map((node) async {
-        final delay = await _mihomoService.testProxyDelay(
-          node.name,
-          timeout: timeout,
-        );
-        return MapEntry(node.id, delay ?? -1);
-      });
 
-      final batchResults = await Future.wait(futures);
-      for (final entry in batchResults) {
-        results[entry.key] = entry.value;
-        completed++;
-        onProgress?.call(completed, total, entry.key, entry.value);
+      // 使用 try-catch 包装每个批次，防止单个失败导致整体失败
+      try {
+        final futures = batch.map((node) async {
+          try {
+            final delay = await _mihomoService
+                .testProxyDelay(node.name, timeout: timeout)
+                .timeout(
+                  Duration(milliseconds: timeout + 3000),
+                  onTimeout: () {
+                    VortexLogger.w('Delay test timeout for ${node.name}');
+                    return null;
+                  },
+                );
+            return MapEntry(node.id, delay ?? -1);
+          } catch (e) {
+            VortexLogger.w('Delay test error for ${node.name}: $e');
+            return MapEntry(node.id, -1);
+          }
+        });
+
+        final batchResults = await Future.wait(futures);
+        for (final entry in batchResults) {
+          results[entry.key] = entry.value;
+          completed++;
+          onProgress?.call(completed, total, entry.key, entry.value);
+        }
+      } catch (e) {
+        VortexLogger.e('Batch test error at index $i', e);
+        // 继续下一批
       }
+
+      // 每批次之间让出一点时间给 UI 线程
+      await Future.delayed(const Duration(milliseconds: 50));
     }
+
+    VortexLogger.i('testAllNodesDelay: Batch tests completed');
 
     // 如果是临时启动的核心，停止它
     if (needStopCore && _isTempCoreRunning) {
-      VortexLogger.i('Stopping temp core after batch test...');
+      VortexLogger.i('testAllNodesDelay: Stopping temp core...');
       try {
         await _platformChannel.stopCore().timeout(
           const Duration(seconds: 5),
@@ -541,6 +578,7 @@ class VpnService {
       _isTempCoreRunning = false;
       // 关闭静默模式
       _platformChannel.setSilentMode(false);
+      VortexLogger.i('testAllNodesDelay: Silent mode disabled');
     }
 
     VortexLogger.i('Batch delay test completed: ${results.length} nodes');
