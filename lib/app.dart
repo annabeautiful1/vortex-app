@@ -7,6 +7,7 @@ import 'shared/services/tray_service.dart';
 import 'core/config/build_config.dart';
 import 'core/utils/logger.dart';
 import 'core/utils/dev_mode.dart';
+import 'core/vpn/vpn_service.dart';
 import 'features/auth/domain/auth_provider.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/dashboard/presentation/pages/dashboard_page.dart';
@@ -291,11 +292,29 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         if (nodesState.nodes.isNotEmpty) {
           ref.read(connectionProvider.notifier).setNodes(nodesState.nodes);
           VortexLogger.i('Loaded ${nodesState.nodes.length} nodes on startup');
+
+          // 预启动核心（异步，不阻塞启动流程）
+          // 这样测速时核心已经在运行，不需要临时启动
+          _startBackgroundCoreAsync();
         }
       }
     } catch (e) {
       VortexLogger.e('Failed to load nodes on startup', e);
     }
+  }
+
+  /// 异步预启动核心，不阻塞 UI
+  void _startBackgroundCoreAsync() {
+    Future.microtask(() async {
+      try {
+        VortexLogger.i(
+          'Pre-starting background core for instant delay testing...',
+        );
+        await VpnService.instance.startBackgroundCore();
+      } catch (e) {
+        VortexLogger.e('Failed to pre-start background core', e);
+      }
+    });
   }
 
   @override

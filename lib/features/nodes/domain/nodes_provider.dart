@@ -149,7 +149,7 @@ class NodesNotifier extends StateNotifier<NodesState> {
   /// 通过 Mihomo API 测试完整链路延迟：
   /// 用户设备 → 中转服务器(可选) → 落地服务器 → 测试URL
   ///
-  /// 如果 VPN 未连接，会临时启动核心进行测试
+  /// 核心应该在应用启动时就已预启动，测速时直接使用
   Future<void> testAllLatencies() async {
     if (state.isTesting) return; // 防止重复测试
     if (state.nodes.isEmpty) {
@@ -166,21 +166,30 @@ class NodesNotifier extends StateNotifier<NodesState> {
       // 确保 VpnService 有节点列表
       VpnService.instance.setNodes(state.nodes);
 
-      // 检查是否已连接 - 如果未连接，使用 TCP ping 代替
-      if (!VpnService.instance.isConnected) {
-        VortexLogger.i('VPN not connected, using TCP ping for latency test');
-        await _testLatenciesWithTcpPing();
-        return;
+      // 检查核心是否在运行
+      if (!VpnService.instance.isCoreRunning) {
+        VortexLogger.i('Core not running, starting background core...');
+        // 尝试启动后台核心（这可能会有短暂卡顿，但只在首次）
+        final started = await VpnService.instance.startBackgroundCore();
+        if (!started) {
+          VortexLogger.w('Failed to start core, falling back to TCP ping');
+          await _testLatenciesWithTcpPing();
+          return;
+        }
+        // 等待核心完全就绪
+        await Future.delayed(const Duration(seconds: 1));
       }
+
+      VortexLogger.i('Using Mihomo API for delay testing (core is running)');
 
       // 使用批量收集模式，减少状态更新频率
       final allLatencies = <String, int?>{};
       int lastUpdateCount = 0;
       const updateInterval = 5; // 每5个节点更新一次UI
 
-      // 使用 VpnService 的真实延迟测试
+      // 使用 VpnService 的真实延迟测试（核心已在运行）
       await VpnService.instance
-          .testAllNodesDelay(
+          .testAllNodesDelayWithRunningCore(
             timeout: 10000,
             onProgress: (completed, total, nodeId, delay) {
               // 收集延迟结果
@@ -220,8 +229,7 @@ class NodesNotifier extends StateNotifier<NodesState> {
     } finally {
       // 确保无论如何都会重置测试状态
       state = state.copyWith(isTesting: false);
-      // 异步停止临时核心，不阻塞 UI
-      _stopTempCoreAsync();
+      // 注意：不再停止核心，让它保持运行以便下次测速
     }
   }
 
@@ -291,22 +299,10 @@ class NodesNotifier extends StateNotifier<NodesState> {
     }
   }
 
-  /// 异步停止临时核心，不阻塞调用者
-  void _stopTempCoreAsync() {
-    Future(() async {
-      try {
-        await VpnService.instance.stopTempCoreIfRunning();
-      } catch (e) {
-        VortexLogger.e('Failed to stop temp core async', e);
-      }
-    });
-  }
-
   /// 停止测速
   void stopTesting() {
     state = state.copyWith(isTesting: false);
-    // 异步停止临时核心
-    _stopTempCoreAsync();
+    // 不再停止核心，让它保持运行
   }
 
   /// 测试单个节点延迟（真实全链路延迟）
@@ -320,9 +316,7 @@ class NodesNotifier extends StateNotifier<NodesState> {
     final newLatencies = Map<String, int?>.from(state.latencies);
     newLatencies[node.id] = delay > 0 ? delay : null;
     state = state.copyWith(latencies: newLatencies);
-
-    // 停止临时核心（如果有）
-    await VpnService.instance.stopTempCoreIfRunning();
+    // 不再停止核心
   }
 
   /// 获取节点延迟

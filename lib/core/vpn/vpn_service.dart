@@ -48,6 +48,10 @@ class VpnService {
   /// 是否已连接
   bool get isConnected => _platformChannel.isConnected;
 
+  /// 核心是否在运行（包括后台运行但未连接VPN的情况）
+  bool get isCoreRunning => _isCoreRunning || _platformChannel.isConnected;
+  bool _isCoreRunning = false;
+
   /// 当前连接的节点
   ProxyNode? get currentNode => _currentNode;
 
@@ -80,6 +84,68 @@ class VpnService {
     } catch (e) {
       VortexLogger.e('Failed to initialize VPN service', e);
       rethrow;
+    }
+  }
+
+  /// 预启动核心（后台运行，不设置系统代理）
+  /// 用于支持即时测速功能，避免测速时临时启动核心导致卡顿
+  Future<bool> startBackgroundCore() async {
+    if (_isCoreRunning || isConnected) {
+      VortexLogger.i('Core already running, skip background start');
+      return true;
+    }
+
+    if (_nodes.isEmpty) {
+      VortexLogger.w('No nodes available, cannot start background core');
+      return false;
+    }
+
+    VortexLogger.i('Starting background core for delay testing...');
+
+    try {
+      // 启用静默模式，不触发 UI 状态变化
+      _platformChannel.setSilentMode(true);
+
+      // 生成配置
+      final configPath = await _writeDelayTestConfig();
+
+      // 启动核心（在后台线程执行，避免阻塞 UI）
+      final started = await _platformChannel.startCore(configPath);
+
+      if (started) {
+        _isCoreRunning = true;
+        VortexLogger.i('Background core started successfully');
+
+        // 等待核心完全启动
+        await Future.delayed(const Duration(milliseconds: 500));
+      } else {
+        VortexLogger.w('Failed to start background core');
+        _platformChannel.setSilentMode(false);
+      }
+
+      return started;
+    } catch (e) {
+      VortexLogger.e('Error starting background core', e);
+      _platformChannel.setSilentMode(false);
+      return false;
+    }
+  }
+
+  /// 停止后台核心
+  Future<void> stopBackgroundCore() async {
+    if (!_isCoreRunning || isConnected) {
+      return; // 不停止正在使用的核心
+    }
+
+    VortexLogger.i('Stopping background core...');
+
+    try {
+      await _platformChannel.stopCore();
+    } catch (e) {
+      VortexLogger.e('Error stopping background core', e);
+    } finally {
+      _isCoreRunning = false;
+      _platformChannel.setSilentMode(false);
     }
   }
 
@@ -582,6 +648,73 @@ class VpnService {
     }
 
     VortexLogger.i('Batch delay test completed: ${results.length} nodes');
+    return results;
+  }
+
+  /// 测试所有节点延迟（假设核心已在运行）
+  ///
+  /// 这是一个简化版本，不会启动或停止核心
+  /// 用于核心已预启动或已连接VPN的情况
+  Future<Map<String, int>> testAllNodesDelayWithRunningCore({
+    int timeout = 10000,
+    void Function(int completed, int total, String nodeId, int delay)?
+    onProgress,
+  }) async {
+    final results = <String, int>{};
+
+    if (_nodes.isEmpty) {
+      VortexLogger.w('No nodes to test');
+      return results;
+    }
+
+    VortexLogger.i(
+      'testAllNodesDelayWithRunningCore: Testing ${_nodes.length} nodes',
+    );
+
+    // 批量测试（并发限制为 5）
+    const batchSize = 5;
+    int completed = 0;
+    final total = _nodes.length;
+
+    for (var i = 0; i < _nodes.length; i += batchSize) {
+      final batch = _nodes.skip(i).take(batchSize).toList();
+
+      try {
+        final futures = batch.map((node) async {
+          try {
+            final delay = await _mihomoService
+                .testProxyDelay(node.name, timeout: timeout)
+                .timeout(
+                  Duration(milliseconds: timeout + 3000),
+                  onTimeout: () {
+                    VortexLogger.w('Delay test timeout for ${node.name}');
+                    return null;
+                  },
+                );
+            return MapEntry(node.id, delay ?? -1);
+          } catch (e) {
+            VortexLogger.w('Delay test error for ${node.name}: $e');
+            return MapEntry(node.id, -1);
+          }
+        });
+
+        final batchResults = await Future.wait(futures);
+        for (final entry in batchResults) {
+          results[entry.key] = entry.value;
+          completed++;
+          onProgress?.call(completed, total, entry.key, entry.value);
+        }
+      } catch (e) {
+        VortexLogger.e('Batch test error at index $i', e);
+      }
+
+      // 让出时间给 UI 线程
+      await Future.delayed(const Duration(milliseconds: 20));
+    }
+
+    VortexLogger.i(
+      'testAllNodesDelayWithRunningCore completed: ${results.length} nodes',
+    );
     return results;
   }
 
