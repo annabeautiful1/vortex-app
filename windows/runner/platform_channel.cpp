@@ -98,8 +98,14 @@ void PlatformChannel::HandleMethodCall(
             auto config_it = args->find(flutter::EncodableValue("configPath"));
             if (config_it != args->end()) {
                 std::string configPath = std::get<std::string>(config_it->second);
-                bool success = core.Start(configPath);
-                result->Success(flutter::EncodableValue(success));
+
+                // Use async start to avoid UI blocking
+                // The result will be communicated via state callback
+                core.StartAsync(configPath, [result = std::move(result)](bool success) mutable {
+                    // This callback runs in background thread
+                    // Flutter MethodResult is thread-safe
+                    result->Success(flutter::EncodableValue(success));
+                });
                 return;
             }
         }

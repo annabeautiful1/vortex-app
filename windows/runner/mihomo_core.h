@@ -22,13 +22,18 @@ public:
     using TrafficCallback = std::function<void(const TrafficStats&)>;
     using LogCallback = std::function<void(const std::string&)>;
     using ErrorCallback = std::function<void(const std::string&)>;
+    using StartCallback = std::function<void(bool success)>;
 
     static MihomoCore& GetInstance();
 
     // Initialize core
     bool Init(const std::string& workDir);
 
-    // Start core with config
+    // Start core with config (async - runs in background thread)
+    // Returns immediately, result will be delivered via callback
+    void StartAsync(const std::string& configPath, StartCallback callback);
+
+    // Start core with config (sync - for backward compatibility)
     bool Start(const std::string& configPath);
 
     // Stop core
@@ -80,6 +85,7 @@ private:
     void StartLogReader();
     void StartTrafficMonitor();
     void StopMonitoring();
+    bool StartInternal(const std::string& configPath);  // Internal start logic
     std::string HttpGet(const std::string& path);
     std::string HttpPut(const std::string& path, const std::string& body);
 
@@ -98,9 +104,11 @@ private:
 
     std::atomic<bool> isRunning_;
     std::atomic<bool> stopMonitoring_;
+    std::atomic<bool> isStarting_;  // Prevent concurrent starts
 
     std::thread logThread_;
     std::thread trafficThread_;
+    std::thread startThread_;  // Background thread for async start
 
     int64_t lastUpload_;
     int64_t lastDownload_;

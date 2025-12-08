@@ -25,6 +25,7 @@ MihomoCore::MihomoCore()
       processId_(0),
       isRunning_(false),
       stopMonitoring_(false),
+      isStarting_(false),
       lastUpload_(0),
       lastDownload_(0),
       lastTime_(0),
@@ -86,6 +87,44 @@ bool MihomoCore::Init(const std::string& workDir) {
 }
 
 bool MihomoCore::Start(const std::string& configPath) {
+    // Synchronous start - calls internal implementation directly
+    return StartInternal(configPath);
+}
+
+void MihomoCore::StartAsync(const std::string& configPath, StartCallback callback) {
+    // Prevent concurrent starts
+    if (isRunning_ || isStarting_) {
+        if (callback) callback(isRunning_);
+        return;
+    }
+
+    isStarting_ = true;
+    state_ = "connecting";
+    if (stateCallback_) {
+        stateCallback_(state_);
+    }
+
+    // Detach any previous start thread
+    if (startThread_.joinable()) {
+        startThread_.detach();
+    }
+
+    // Launch background thread for startup
+    startThread_ = std::thread([this, configPath, callback]() {
+        bool success = StartInternal(configPath);
+        isStarting_ = false;
+
+        // Invoke callback on completion
+        if (callback) {
+            callback(success);
+        }
+    });
+
+    // Detach so it runs independently
+    startThread_.detach();
+}
+
+bool MihomoCore::StartInternal(const std::string& configPath) {
     if (isRunning_) {
         return true;
     }
@@ -118,6 +157,10 @@ bool MihomoCore::Start(const std::string& configPath) {
         if (errorCallback_) {
             errorCallback_("Failed to start core process");
         }
+        state_ = "error";
+        if (stateCallback_) {
+            stateCallback_(state_);
+        }
         return false;
     }
 
@@ -125,7 +168,7 @@ bool MihomoCore::Start(const std::string& configPath) {
     processThread_ = pi.hThread;
     processId_ = pi.dwProcessId;
 
-    // Wait a bit for core to start
+    // Wait for core to start (this is now in background thread, won't block UI)
     Sleep(500);
 
     // Check if process is still running
@@ -138,6 +181,10 @@ bool MihomoCore::Start(const std::string& configPath) {
         CloseHandle(processThread_);
         processHandle_ = nullptr;
         processThread_ = nullptr;
+        state_ = "error";
+        if (stateCallback_) {
+            stateCallback_(state_);
+        }
         return false;
     }
 
