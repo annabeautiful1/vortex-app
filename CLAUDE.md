@@ -22,10 +22,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [x] `VpnService` - VPN 连接生命周期管理
 - [x] `ApiManager` - 多 API 轮询和故障转移
 - [x] `StorageService` - 本地存储（Hive + SecureStorage）
-- [x] `SubscriptionParser` - 订阅解析器
+- [x] `SubscriptionParser` - 订阅解析器（支持 Clash YAML、Base64、SIP008、URI 列表）
 
 #### 阶段三：平台原生代码
-- [x] Windows: Platform Channel + 系统代理设置
+- [x] Windows: Platform Channel + 系统代理设置 + Mihomo 核心管理
 - [x] macOS: Platform Channel 基础实现
 - [x] iOS: Platform Channel 基础实现
 - [x] Android: Platform Channel 基础实现
@@ -39,81 +39,308 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [x] 节点列表页面框架
 - [x] 设置页面框架
 - [x] 登录页面框架
+- [x] 系统托盘（TrayService）
 
 #### 阶段五：VPN 连接管理
 - [x] `ConnectionProvider` 状态管理
 - [x] 连接/断开/切换节点逻辑
 - [x] 流量统计 StreamProvider
 - [x] Mihomo 配置文件生成
+- [x] 后台核心预启动（避免测速卡顿）
+- [x] 静默模式（测速时不影响 UI 状态）
+
+#### 阶段六：用户认证系统
+- [x] SSPanel 登录/注册 API 对接
+- [x] V2board 登录/注册 API 对接
+- [x] Token 存储和自动刷新
+- [x] 自动登录功能（启动时检查保存的会话）
+- [x] 凭据保存和自动重登录
+
+#### 阶段七：订阅管理
+- [x] 从面板获取订阅链接
+- [x] 解析 Clash/ClashMeta 格式
+- [x] 节点列表更新
+- [x] 登录成功后自动获取节点列表
+- [x] 支持多种订阅类型参数（clashmeta/meta/1-4）
 
 ---
 
-### 🚧 待完成功能
+## 🔄 与成熟客户端的对比分析
 
-#### 高优先级（核心功能）
-- [x] **Mihomo 核心集成** - 嵌入 mihomo 二进制文件
-  - [x] Windows: mihomo.exe 打包和启动 (v1.19.17)
-  - [ ] macOS: mihomo 二进制打包
-  - [ ] iOS: Network Extension 实现
-  - [ ] Android: VpnService 实现
-- [x] **用户认证系统**
-  - [x] SSPanel 登录/注册 API 对接
-  - [x] V2board 登录/注册 API 对接
-  - [x] Token 存储和自动刷新
-  - [x] 自动登录功能（启动时检查保存的会话）
-- [x] **订阅拉取和解析**
-  - [x] 从面板获取订阅链接
-  - [x] 解析 Clash/ClashMeta 格式
-  - [x] 节点列表更新
-  - [x] 登录成功后自动获取节点列表
+### 参考客户端
+- **Clash for Windows** (已停止维护) - Electron + Go Core
+- **Clash Verge Rev** - Tauri (Rust) + React + Mihomo
+- **FlClash** - Flutter + Mihomo (与我们技术栈相同，26.6k+ stars)
 
-#### 中优先级（用户体验）
-- [ ] **节点管理**
-  - [ ] 节点列表展示（分组/标签）
-  - [ ] 节点延迟测试
-  - [ ] 节点排序和筛选
-  - [ ] 倍率标签显示
-- [ ] **TUN 模式**
-  - [ ] 各平台 TUN 实现
-  - [ ] 权限请求处理
-- [ ] **设置功能**
-  - [ ] 开机自启动
-  - [ ] 自动连接
-  - [ ] 代理模式切换
-  - [ ] 日志导出
+### FlClash 架构参考（Flutter 同技术栈）
 
-#### 低优先级（增值功能）
-- [ ] **公告系统** - 从面板获取公告
-- [ ] **客服系统** - Telegram 消息对接
-- [ ] **内购系统** - 续费引导
-- [ ] **自定义主题** - Logo/名称/颜色
-- [ ] **多语言支持**
+FlClash 的架构对我们最有参考价值，因为技术栈完全相同：
+
+```
+┌─────────────────────────────────────────────────┐
+│           Flutter UI Layer (Dart)               │
+│  ┌──────────┬──────────┬──────────┬──────────┐ │
+│  │  Pages   │  Widgets │  Views   │  Common  │ │
+│  └──────────┴──────────┴──────────┴──────────┘ │
+└─────────────────────────────────────────────────┘
+                      ↕ (Riverpod State Management)
+┌─────────────────────────────────────────────────┐
+│        Application Logic Layer (Dart)           │
+│  ┌──────────┬──────────┬──────────┬──────────┐ │
+│  │Providers │Controller│ Managers │  Models  │ │
+│  └──────────┴──────────┴──────────┴──────────┘ │
+└─────────────────────────────────────────────────┘
+                      ↕ (FFI / Platform Channel)
+┌─────────────────────────────────────────────────┐
+│         Native Platform Layer                   │
+│  ┌──────────┬──────────┬──────────┬──────────┐ │
+│  │ Android  │ Windows  │  macOS   │  Linux   │ │
+│  │(Kotlin)  │  (C++)   │  (C++)   │  (C++)   │ │
+│  └──────────┴──────────┴──────────┴──────────┘ │
+└─────────────────────────────────────────────────┘
+                      ↕ (C Bridge / CGO)
+┌─────────────────────────────────────────────────┐
+│          Go Core Layer (ClashMeta)              │
+│  ┌──────────┬──────────┬──────────┬──────────┐ │
+│  │  Action  │  Bridge  │   Hub    │   TUN    │ │
+│  │ Dispatch │   FFI    │  Events  │  Network │ │
+│  └──────────┴──────────┴──────────┴──────────┘ │
+└─────────────────────────────────────────────────┘
+```
+
+**FlClash 关键设计**：
+- **核心集成**: ClashMeta 作为 Git Submodule，编译为动态库 (libclash.so/dll)
+- **通信方式**: FFI 直接调用 Go 导出函数，事件通过回调返回
+- **Manager 模式**: 13 个 Manager 管理不同功能模块
+- **TUN 实现**: Android 使用 VpnService + gVisor 网络栈
+
+### 架构对比
+
+| 功能模块 | Clash Verge Rev | Vortex (我们) | 差距分析 |
+|---------|----------------|---------------|---------|
+| 核心管理 | Sidecar + Service 双模式 | 仅 Sidecar 模式 | 需要添加 Service 模式支持 TUN |
+| 配置验证 | Draft-Validate-Apply | 直接应用 | 需要添加配置验证机制 |
+| 配置增强 | Merge + Script 管道 | 无 | 可选功能 |
+| 延迟测试 | HTTPS URL + unified-delay | 已实现 | ✅ 已对齐 |
+| 系统代理 | sysproxy-rs + 代理守护 | 基础实现 | 需要添加代理守护 |
+| TUN 模式 | Service 模式支持 | 配置已有，实现待完善 | 需要完善各平台实现 |
+| 连接管理 | WebSocket 实时流 | REST API 轮询 | 可优化为 WebSocket |
+| 日志系统 | 分级 + 自动清理 + 流传输 | 基础日志 | 需要完善 |
+| 配置文件 | 多配置 + 激活切换 | 单配置 | 可选功能 |
 
 ---
 
-### 🎯 下一步建议
+## 🚧 待完成功能（按优先级排序）
 
-**推荐下一步：其他平台 Mihomo 核心集成**
+### 🔴 高优先级（核心代理功能）
 
-Windows 平台已完成：
-1. ✅ 下载 mihomo Windows 二进制 (v1.19.17)
-2. ✅ 实现核心启动/停止逻辑
-3. ✅ 测试基本代理功能
-4. ✅ 验证系统代理设置生效
-5. ✅ 自动登录和节点列表获取
+#### 1. 配置验证机制（参考 Clash Verge Rev）
+- [ ] 实现 `mihomo -t -f config.yaml` 配置验证
+- [ ] 验证失败自动回滚
+- [ ] 配置错误提示
 
-建议接下来完成：
-1. macOS 平台 mihomo 二进制打包
-2. 节点管理界面优化（分组、延迟测试）
-3. Android VpnService 实现
+#### 2. 代理守护（Proxy Guard）
+- [ ] 监控系统代理设置是否被外部修改
+- [ ] 自动检测和恢复代理设置
+- [ ] 可配置检查间隔
+
+#### 3. 核心管理优化
+- [ ] Windows: 将核心启动移到后台线程（避免 UI 阻塞）
+- [ ] 添加核心健康检查定时器
+- [ ] 核心崩溃自动重启
+
+#### 4. TUN 模式完善
+- [ ] Windows: 实现 TUN 模式（需要管理员权限）
+- [ ] macOS: 实现 TUN 模式（Network Extension）
+- [ ] Android: VpnService 实现
+- [ ] iOS: Network Extension 实现
+
+#### 5. 连接管理优化
+- [ ] WebSocket 实时连接监控（替代 REST 轮询）
+- [ ] 连接列表虚拟化渲染（大量连接时）
+- [ ] 关闭指定连接功能
+
+### 🟡 中优先级（用户体验）
+
+#### 6. 节点管理增强
+- [ ] 节点分组展示
+- [ ] 节点标签筛选（解锁、游戏、流媒体等）
+- [ ] 倍率标签显示
+- [ ] 节点排序（按延迟、按名称）
+- [ ] 节点搜索
+
+#### 7. 日志系统完善
+- [ ] 日志分级（debug/info/warning/error）
+- [ ] 日志自动清理（1天/7天/30天）
+- [ ] 日志实时流传输到 UI
+- [ ] 日志导出功能
+
+#### 8. 设置功能完善
+- [ ] 开机自启动（各平台实现）
+- [ ] 自动连接（启动时自动连接上次节点）
+- [ ] 代理模式切换（系统代理/TUN/直连）
+- [ ] 允许局域网访问
+
+#### 9. 代理组支持
+- [ ] 代理组展示（Select/URL-Test/Fallback/Load-Balance）
+- [ ] 代理组节点切换
+- [ ] 自动选择最低延迟节点
+
+### 🟢 低优先级（增值功能）
+
+#### 10. 配置增强管道（可选）
+- [ ] Merge 配置支持（YAML 合并）
+- [ ] Script 配置支持（JavaScript 转换）
+- [ ] 多配置管理和切换
+
+#### 11. 规则管理
+- [ ] 规则列表展示
+- [ ] 自定义规则添加
+- [ ] Rule Provider 支持
+
+#### 12. 其他功能
+- [ ] 公告系统 - 从面板获取公告
+- [ ] 客服系统 - Crisp/Telegram 消息对接
+- [ ] 内购系统 - 续费引导
+- [ ] 自定义主题 - Logo/名称/颜色
+- [ ] 多语言支持
 
 ---
 
-## Project Overview
+## 🎯 技术优化建议
 
-Vortex (漩涡) is a cross-platform VPN client built with Flutter, supporting iOS, Android, macOS, and Windows. It uses Mihomo (Clash.Meta) as the proxy core and supports SSPanel and V2board panels.
+### 1. 核心启动优化（解决 UI 卡顿）
 
-## Common Commands
+**问题**：Windows 原生代码中 `startCore()` 有 `Sleep(500)` 阻塞主线程
+
+**解决方案**（参考 Clash Verge Rev）：
+```cpp
+// 将核心启动移到后台线程
+std::thread([this, configPath]() {
+    // 启动核心
+    bool success = StartCoreInternal(configPath);
+    // 通过回调通知 Flutter
+    PostStateCallback(success ? "connected" : "error");
+}).detach();
+```
+
+### 2. 配置验证机制
+
+**实现方式**：
+```dart
+Future<bool> validateConfig(String configPath) async {
+  final result = await Process.run('mihomo', ['-t', '-f', configPath]);
+  return result.exitCode == 0;
+}
+
+Future<bool> applyConfig(String configPath) async {
+  // 1. 验证配置
+  if (!await validateConfig(configPath)) {
+    VortexLogger.e('Config validation failed');
+    return false;
+  }
+  // 2. 应用配置
+  return await _platformChannel.reloadConfig(configPath);
+}
+```
+
+### 3. 代理守护实现
+
+```dart
+class ProxyGuard {
+  Timer? _guardTimer;
+
+  void start() {
+    _guardTimer = Timer.periodic(Duration(seconds: 10), (_) {
+      _checkAndRestoreProxy();
+    });
+  }
+
+  Future<void> _checkAndRestoreProxy() async {
+    final currentProxy = await _getSystemProxy();
+    if (_shouldBeEnabled && !currentProxy.enabled) {
+      VortexLogger.w('System proxy was modified externally, restoring...');
+      await _platformChannel.setSystemProxy(true, port: _expectedPort);
+    }
+  }
+}
+```
+
+### 4. WebSocket 连接监控
+
+```dart
+class ConnectionMonitor {
+  WebSocket? _ws;
+
+  Future<void> connect() async {
+    _ws = await WebSocket.connect('ws://127.0.0.1:9090/connections');
+    _ws!.listen((data) {
+      final connections = jsonDecode(data);
+      _connectionController.add(connections);
+    });
+  }
+}
+```
+
+---
+
+## 📁 项目结构
+
+```
+lib/
+├── app.dart                          # 应用入口和路由
+├── main.dart                         # Flutter 入口
+├── core/                             # 核心服务
+│   ├── api/                          # API 客户端
+│   │   ├── api_manager.dart          # 多 API 轮询管理
+│   │   ├── sspanel_api.dart          # SSPanel API
+│   │   └── v2board_api.dart          # V2board API
+│   ├── config/                       # 配置
+│   │   └── build_config.dart         # 构建配置
+│   ├── platform/                     # 平台通道
+│   │   └── platform_channel_service.dart
+│   ├── proxy/                        # 代理服务
+│   │   ├── mihomo_service.dart       # Mihomo REST API
+│   │   └── proxy_core.dart           # 代理核心接口
+│   ├── subscription/                 # 订阅解析
+│   │   └── subscription_parser.dart
+│   ├── utils/                        # 工具类
+│   │   ├── logger.dart
+│   │   └── dev_mode.dart
+│   └── vpn/                          # VPN 服务
+│       └── vpn_service.dart          # VPN 生命周期管理
+├── features/                         # 功能模块
+│   ├── auth/                         # 认证
+│   │   ├── domain/auth_provider.dart
+│   │   └── presentation/pages/login_page.dart
+│   ├── dashboard/                    # 仪表盘
+│   │   ├── domain/connection_provider.dart
+│   │   └── presentation/
+│   ├── nodes/                        # 节点管理
+│   │   ├── domain/nodes_provider.dart
+│   │   └── presentation/pages/nodes_page.dart
+│   ├── settings/                     # 设置
+│   │   └── presentation/pages/settings_page.dart
+│   ├── support/                      # 客服
+│   │   └── presentation/pages/support_page.dart
+│   └── debug/                        # 调试
+│       └── presentation/pages/debug_panel.dart
+└── shared/                           # 共享组件
+    ├── constants/app_constants.dart
+    ├── models/                       # 数据模型
+    │   ├── proxy_node.dart
+    │   └── user.dart
+    ├── services/                     # 共享服务
+    │   ├── storage_service.dart
+    │   ├── tray_service.dart
+    │   ├── crisp_service.dart
+    │   └── window_service.dart
+    └── themes/app_theme.dart
+```
+
+---
+
+## 🔧 Common Commands
 
 ```bash
 # Install dependencies
@@ -139,23 +366,27 @@ flutter build macos --release        # macOS
 flutter build windows --release      # Windows
 ```
 
-## Architecture
+---
+
+## 🏗️ Architecture
 
 ### State Management
 Uses Riverpod with `StateNotifier` pattern. All providers are in `domain/` folders within each feature:
-- `ConnectionNotifier` → `VpnConnectionState` (renamed to avoid Flutter's built-in `ConnectionState`)
+- `ConnectionNotifier` → `VpnConnectionState`
 - `AuthNotifier` → `AuthState`
 - `NodesNotifier` → `NodesState`
+- `SettingsNotifier` → `SettingsState`
 
 ### Navigation
 GoRouter with a `ShellRoute` for the main navigation rail. Routes defined in `lib/app.dart`.
 
 ### Core Services (Singletons)
 - `ApiManager.instance` - Multi-API polling with auto-failover
-- `ProxyCore.instance` - Proxy core interface (FFI hooks for Mihomo)
-- `MihomoService` - REST API client for Clash.Meta external controller
+- `VpnService.instance` - VPN connection lifecycle management
+- `MihomoService.instance` - REST API client for Mihomo external controller
 - `StorageService.instance` - Hive + SecureStorage wrapper
-- `PlatformChannelService` - Flutter ↔ Native communication
+- `PlatformChannelService.instance` - Flutter ↔ Native communication
+- `TrayService.instance` - System tray management
 
 ### Panel API Patterns
 Two panel types with different endpoints:
@@ -165,14 +396,44 @@ Two panel types with different endpoints:
 ### Feature Structure
 Each feature follows: `features/{name}/domain/` (providers) + `features/{name}/presentation/` (UI)
 
-## Key Conventions
+---
+
+## 📝 Key Conventions
 
 - Class `VpnConnectionState` is used instead of `ConnectionState` to avoid collision with Flutter's async library
 - All data models use manual `copyWith()`, `toJson()`, `fromJson()` (no code generation)
 - Chinese error messages in `ErrorMessages` class, English for logs
 - Theme colors defined in `AppTheme` with connection status colors
+- 后台核心预启动模式：应用启动时预启动 Mihomo 核心，测速时直接使用，避免卡顿
+- 静默模式：测速时不广播状态变化，避免影响 UI
 
-## CI/CD
+---
+
+## 🔐 Mihomo REST API 接口
+
+```
+GET  /                    # 健康检查
+GET  /version             # 获取版本
+GET  /configs             # 获取配置
+PUT  /configs             # 重载配置
+GET  /proxies             # 获取所有代理
+GET  /proxies/{name}      # 获取单个代理
+PUT  /proxies/{name}      # 切换代理
+GET  /proxies/{name}/delay # 测试延迟
+GET  /rules               # 获取规则
+GET  /connections         # 获取连接（支持 WebSocket）
+DELETE /connections       # 关闭所有连接
+DELETE /connections/{id}  # 关闭单个连接
+GET  /traffic             # 流量统计（SSE）
+GET  /logs                # 日志流（SSE）
+GET  /memory              # 内存使用
+PUT  /providers/proxies/{name}  # 刷新代理 Provider
+PUT  /providers/rules/{name}    # 刷新规则 Provider
+```
+
+---
+
+## 🚀 CI/CD
 
 GitHub Actions runs on push to master:
 - `ci.yml`: analyze, format check, test
@@ -180,60 +441,33 @@ GitHub Actions runs on push to master:
 
 Format check is strict - run `dart format lib/` before committing.
 
-我需要你帮我设计一个完美，现代化，可扩展的架构，目的是为了开发一款可以运行于多种设备：IOS,MACOS,安卓,Windows，名称为：Vortex 漩涡客户端。尽量满足一套代码，只需要微调代码即可在不同的系统中稳定运行！请你首先创建项目文件夹。创建github仓库，要配置完美的github工作流，通过github在线编译，准确判断，不要出现大量编译报错的情况，并且每新增一个功能就要推送到github仓库中。
-功能与特点：一键登录、一键连接，支持注册   全平台一键 TUN 模式，代理全部流量   内建代理用于 API 通信，解决阻断、反诈、直连不畅等问题  多 OSS/API 支持，自动轮询，永不被墙   全协议支持，策略组分流支持   简化 Dashboard，小白也能看懂的信息面板   可自定义主题色彩、Logo、名称、欢迎图   完善的内购系统，带续费引导，支持码类支付和跳转支付   独家一键客服系统，支持多席位，支持查看用户套餐信息，可 Telegram 消息处理，即时聊天、互发图片   优化节点延迟算法，真实反映用户端到落地的 TCP 延迟   公告支持，节点倍率标签，自定义标签（如解锁等）,安卓自定义包名。
-支持sspanel-cool(/root/bbxy/baibianxiaoying.top)和v2board(/root/v2b),
-支持的协议类型:Shadowsocks(SS-2022、SMUX、插件支持obfs/v2ray-plugin/shadow-tls/restls),ShadowsocksR,VMESS,VLESS(WS-TLS、TCP-TLS、reality-grpc、reality-vision、xtls-rprx-vision),Trojan,Hysteria,TUIC,WireGuard,AnyTLS.）
-SSPanel面板必须部署SSPanel已部署guest_config接口（必要），否则无法对 API 进行有效性检测！我是这样部署的：在网站根目录 /public 添加 guest_config.txt 文件，内容如下：
+---
 
+## 📚 参考资源
 
-Copy
-{
-	"is_email_verify": true,
-	"is_invite_force": false,
-	"email_whitelist_suffix": [
-		"gmail.com",
-		"outlook.com"
-	],
-	"app_description": "欢迎使用xxxx"
-}
+- [Clash Verge Rev GitHub](https://github.com/clash-verge-rev/clash-verge-rev)
+- [FlClash GitHub](https://github.com/chen08209/FlClash)
+- [Mihomo GitHub](https://github.com/MetaCubeX/mihomo)
+- [Mihomo Wiki](https://wiki.metacubex.one/)
+- [sysproxy-rs](https://github.com/zzzgydi/sysproxy-rs) - 系统代理设置库
 
-"is_email_verify" 为是否开启邮箱验证，false 为不开启，true 为开启 "is_invite_force" 为是否开启强制邀请，false 为不开启，true 为开启 "email_whitelist_suffix" 为邮箱后缀白名单，请按格式填写。"email_whitelist_suffix": null #不限制邮箱后缀，"app_description" 为客户端登陆界面左下角机场名称下的简介，可随意自定义。
-V2board 订阅下发：Vortex 漩涡客户端默认采用 Clash 获取订阅配置，即节点和策略组分流规则。而 V2board 官方的 Clash.php 并不支持下发最新的协议，如 SS-2022 等。
+---
 
-于是，Vortex 提供了在打包时提供了订阅类型的自定义选项：可直接在订阅类型处填写 clashmeta 或者 meta，用于获取新协议的节点，如 SS-2022、Hysteria 等
+## ⚠️ 常见问题
 
-V2board 版本为 1.7.1 - 1.7.3 时，请使用 clashmeta
+### 1. 登录时提示"查询后端"
+表明无可用 API 或 API 全部测活失败。检查：
+- V2board: `http(s)://API地址/api/v1/guest/comm/config`
+- SSPanel: `http(s)://API地址/guest_config.txt`
 
-V2board 版本为 1.7.4 时，请使用 meta。
-SSPanel 订阅下发：同理，SSPanel 可自定义 1、2、3、4 ，效果等同于clash=1、2、3、4
+### 2. 订阅无节点或只有 DIRECT/REJECT
+- 检查订阅链接的国内连接性
+- 检查是否有不支持的字段（如 GEOSITE）
+- 配置文件过大时使用 rule-provider
 
-请注意仅填写 1、2、3、4 等，不要填写 clash=1 ，会造成无法登录的问题。
-客户端日志查看：客户端需要有 API 和订阅日志，方便排查问题：
-1、Windows：前往 C:\Users\Administrator\.config\com.vortex.helper  ，注意修改用户名
-2、macOS：打开 Finder， 键盘同时按住 Shift+Command+G，在弹出的输入框中输入 /Users/[用户名]/.config/com.vortex.helper
-3、安卓：无法登录的，长按登陆界面的 Logo 两秒，日志将会复制到剪贴板；
+### 3. 断电后无法上网
+系统代理未恢复，重新打开客户端会自动修复。建议开启"开机启动"。
 
-可正常登陆的，前往 关于（About） 页面，点击导出日志即可
-
-设置一些提示来应对常见问题：
-1、登陆时提示查询后端：
-如果遇到“查询有效后端”的问题，表明无可用 API 或 API 全部测活失败。此时可先查看对应客户端的日志排查问题。或者检查打包后台和 OSS 内的 API 地址测活是否正常，V2board 为 http(s)://API地址/api/v1/guest/comm/config，SSPanel 和 WHMCS 为 http(s)://API地址/guest_config.txt，若返回下图所示字段，则表明API能通过客户端测活
-2、拉取订阅问题：
-如果遇到订阅无法正常拉取或无节点或只有 DIRECT、REJECT 两个节点，则表明无法下载规则或下发的配置规则有问题或者配置文件过大。
-
-对于无法正常下载规则，可检查订阅链接的国内连接性；
-
-对于配置问题，可检查是否有 Vortex 客户端不支持的字段，如 GEOSITE 等；
-
-对于配置文件过大——表现为几万甚至数十万条规则数的，建议使用 rule-provider 规则集的方式。
-3、可能存在的无法上网问题：
-如遇到电脑直接断电关机等，重启后无法连接网络的，可检查系统代理是否已被恢复，或者再打开 Vortex 客户端，会自动修复系统代理，同时建议勾选“开机启动”避免可能的网络无法连接的问题。
-4、登录提示“请等待”或者左下角简介未加载
-首先排除API问题，若API正常，则表明核心未启动：
-
-macOS 核心未启动：其他软件，如 surge/clashx 等后台占用，解决方法卸载其他同类软件重启电脑。另mac请注意区分 Intel 和 m 芯片，也会导致核心不启动 
-
-Windows 核心没启动：杀毒软件杀了，关闭杀毒软件重新安装客户端。或者其他软件，如clash等后台占用，解决方法卸载其他同类软件后重启电脑
-
-不要开发前端，我会自行开发前端，你只需要留好前端需要的接口即可
+### 4. 核心未启动
+- Windows: 杀毒软件拦截，关闭杀毒软件重装
+- macOS: 其他代理软件占用端口，卸载后重启
