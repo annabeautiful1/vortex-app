@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import '../../shared/models/proxy_node.dart';
+import '../config/config_validator.dart';
 import '../platform/platform_channel_service.dart';
 import '../proxy/mihomo_service.dart';
 import '../utils/logger.dart';
@@ -16,6 +17,7 @@ class VpnService {
   final PlatformChannelService _platformChannel =
       PlatformChannelService.instance;
   final MihomoService _mihomoService = MihomoService.instance;
+  final ConfigValidator _configValidator = ConfigValidator.instance;
 
   bool _isInitialized = false;
   ProxyNode? _currentNode;
@@ -72,6 +74,9 @@ class VpnService {
       // 创建配置目录
       await _ensureConfigDirectory();
 
+      // 初始化配置验证器
+      await _configValidator.init();
+
       // 初始化 Mihomo REST API 服务
       await _mihomoService.init(
         host: '127.0.0.1',
@@ -108,6 +113,17 @@ class VpnService {
 
       // 生成配置
       final configPath = await _writeDelayTestConfig();
+
+      // 验证配置（后台核心也需要验证）
+      final validationResult = await _configValidator.validateConfig(
+        configPath,
+      );
+      if (!validationResult.isValid) {
+        VortexLogger.w(
+          'Background config validation failed: ${validationResult.errorMessage}',
+        );
+        // 后台核心验证失败不阻塞，继续尝试启动
+      }
 
       // 启动核心（在后台线程执行，避免阻塞 UI）
       final started = await _platformChannel.startCore(configPath);
@@ -156,6 +172,11 @@ class VpnService {
   }
 
   /// 连接到指定节点
+  ///
+  /// 使用 Draft-Validate-Apply 模式：
+  /// 1. 生成配置文件
+  /// 2. 验证配置
+  /// 3. 启动核心
   Future<bool> connect({ProxyNode? node}) async {
     if (!_isInitialized) {
       await init();
@@ -170,10 +191,22 @@ class VpnService {
 
       VortexLogger.i('Connecting to ${targetNode.name}...');
 
-      // 生成并写入配置文件
+      // 1. Draft - 生成并写入配置文件
       _currentConfigPath = await _writeConfig(targetNode);
 
-      // 启动核心
+      // 2. Validate - 验证配置（参考 Clash Verge Rev）
+      final validationResult = await _configValidator.validateConfig(
+        _currentConfigPath!,
+      );
+      if (!validationResult.isValid) {
+        VortexLogger.e(
+          'Config validation failed: ${validationResult.errorMessage}',
+        );
+        throw Exception(validationResult.errorMessage ?? '配置验证失败');
+      }
+      VortexLogger.i('Config validation passed');
+
+      // 3. Apply - 启动核心
       final coreStarted = await _platformChannel.startCore(_currentConfigPath!);
       if (!coreStarted) {
         throw Exception('启动核心失败');
